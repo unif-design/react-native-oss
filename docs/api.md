@@ -47,9 +47,9 @@ access.dispose(); // 退出或身份变化时同步失效此授权实例
 
 `transferRemoteFileToOss(input, options): Promise<OssTransferResult>`
 
-input 使用 `sourceUrl` 替代 `fileUri`；其余字段与上传一致。options 使用上传授权、信号和进度，并要求 `transferDirectory: string | undefined` 与 `createId(): string`。目录是宿主分配的私有 file URI；不可用时传 `undefined`，返回 `unsupported`。`createId` 必须返回目录内唯一且适合作为文件名的标识，不含目录分隔符或父路径。
+input 使用 `sourceUrl` 替代 `fileUri`；其余字段与上传一致。options 使用上传授权、信号和进度，并要求 `getTransferDirectory(): string | undefined` 与 `createId(): string`。目录是宿主分配的私有 file URI；不可用时返回 `undefined`，返回 `unsupported`。`createId` 必须返回目录内唯一且适合作为文件名的标识，不含目录分隔符或父路径。
 
-授权和目标验证先于下载。仅 HTTP 200 且文件落地后上传，保留签名 URL 原字节。下载失败标识 `stage: 'download'`，上传失败为 `stage: 'upload'`。交给上传后的临时文件等待 `onSourceReleased` 才释放。`maxBytes` 不改变下载默认策略。
+目录函数在输入和取消校验之后、凭证准备之前按需调用；本地上传、无效输入及提前取消不读取转存目录。授权和目标验证先于下载。仅 HTTP 200 且文件落地后上传，保留签名 URL 原字节。下载失败标识 `stage: 'download'`，上传失败为 `stage: 'upload'`。交给上传后的临时文件等待 `onSourceReleased` 才释放。`maxBytes` 不改变下载默认策略。
 
 现有转存和批量组合没有向内部上传传递 `urlMode`；本包保留这一行为。直接单文件上传仍支持 `urlMode`。
 
@@ -57,6 +57,6 @@ input 使用 `sourceUrl` 替代 `fileUri`；其余字段与上传一致。option
 
 `uploadOssBatch(items, options): Promise<OssBatchResult>`
 
-item 为 `{ kind: 'local', ...UploadOssFileInput }` 或 `{ kind: 'remote', ...TransferRemoteFileToOssInput }`。options 包含授权、信号、`transferDirectory`、`createId`，进度为 `{ index, progress }`。
+item 为 `{ kind: 'local', ...UploadOssFileInput }` 或 `{ kind: 'remote', ...TransferRemoteFileToOssInput }`。options 包含授权、信号、`getTransferDirectory`、`createId`，进度为 `{ index, progress }`。
 
 结果 `items` 与输入同序，逐项保留 `index`、`path`、`result`。单项失败继续，取消只停止未开始项；共同准备失败时返回 `preparationError`，各项为 `{ status: 'not_started', reason: 'preparation_failed' }`。取消后未开始项 reason 为 `cancelled`。不去重、不改名、不回滚已成功项。

@@ -36,7 +36,7 @@ export interface OssTransferOptions extends Omit<
   UploadOssFileOptions,
   'onSourceReleased'
 > {
-  transferDirectory: string | undefined;
+  getTransferDirectory(): string | undefined;
   createId(): string;
 }
 
@@ -64,7 +64,7 @@ export interface OssBatchOptions extends Omit<
   UploadOssFileOptions,
   'onProgress' | 'onSourceReleased'
 > {
-  transferDirectory: string | undefined;
+  getTransferDirectory(): string | undefined;
   createId(): string;
   onProgress?(event: Readonly<OssBatchProgress>): void;
 }

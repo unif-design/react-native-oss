@@ -53,11 +53,13 @@ export default function App() {
     setReleased(false);
     setProgress('');
     try {
-      const root = getNativeTemporaryRoot();
       const options = {
         authorization: { kind: 'provided' as const, credential },
         signal: controller.signal,
-        transferDirectory: root ? `${root}/OssExampleTransfers` : undefined,
+        getTransferDirectory: () => {
+          const root = getNativeTemporaryRoot();
+          return root ? `${root}/OssExampleTransfers` : undefined;
+        },
         createId: randomUUID,
       };
       const onProgress = ({

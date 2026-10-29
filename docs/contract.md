@@ -10,7 +10,7 @@ description: 等价迁移的边界、差异与宿主责任。
 | 原归属 | 公共库处理 | 宿主责任 |
 | --- | --- | --- |
 | 固定 key 范围 | `createOssCredentialAccess` 接收白名单 | 显式传回原范围，不能因字符串类型扩大权限 |
-| 转存子目录 | `transferDirectory` | 原平台根目录与原子目录名，保留清理边界 |
+| 转存子目录 | `getTransferDirectory` | 原平台根目录与原子目录名，保留清理边界 |
 | 应用 UUID 工具 | `createId` | 原唯一标识生成器及错误语义 |
 | 应用文件能力 | Files 公共入口 | 同版本原生 SDK；补丁由 Portal 维护并在宿主应用 |
 | 应用日志入口 | Logger 公共入口 | 统一初始化、策略、身份、格式和存储路径 |

@@ -395,11 +395,53 @@ test('显式宿主目录与文件名逐字交给公共下载，不回落到默�
   const createId = jest.fn(() => 'host-unique-id');
   await oss.transferRemoteFileToOss(input, {
     ...provided(),
-    transferDirectory: 'file:///private/host-transfers',
+    getTransferDirectory: () => 'file:///private/host-transfers',
     createId,
   });
   expect(createId).toHaveBeenCalledTimes(1);
   expect(download.mock.calls[0][0].targetUri).toBe(
     'file:///private/host-transfers/host-unique-id',
   );
+});
+
+test('宿主目录在输入与取消检查后读取，并保持先目录后授权的原顺序', async () => {
+  const sequence: string[] = [];
+  const getTransferDirectory = jest.fn(() => {
+    sequence.push('directory');
+    return 'file:///private/host-transfers';
+  });
+  const get = jest.fn(async () => {
+    sequence.push('authorization');
+    return { status: 'success' as const, credential: credential() };
+  });
+  const options = {
+    authorization: {
+      kind: 'managed' as const,
+      access: { get, dispose: jest.fn() },
+      ossKey: 'ossprivate',
+    },
+    getTransferDirectory,
+    createId: () => 'host-id',
+  };
+  expect(await oss.transferRemoteFileToOss(input, options)).toEqual(success);
+  expect(sequence).toEqual(['directory', 'authorization']);
+  expect(download.mock.calls[0][0].targetUri).toBe(
+    'file:///private/host-transfers/host-id',
+  );
+  getTransferDirectory.mockClear();
+  const controller = new AbortController();
+  controller.abort();
+  expect(
+    await oss.transferRemoteFileToOss(input, {
+      ...options,
+      signal: controller.signal,
+    }),
+  ).toEqual({ status: 'cancelled' });
+  expect(
+    await oss.transferRemoteFileToOss(
+      { ...input, sourceUrl: 'file:///invalid' },
+      options,
+    ),
+  ).toMatchObject({ status: 'failed', error: { reason: 'invalid_input' } });
+  expect(getTransferDirectory).not.toHaveBeenCalled();
 });

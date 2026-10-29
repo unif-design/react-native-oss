@@ -59,7 +59,7 @@ export async function transferRemoteFileToOss(
   const prepared = prepareUploadObject(objectInput);
   if (!validSource(sourceUrl) || !prepared)
     return { ...uploadFailure('invalid_input'), stage: 'upload' };
-  const root = options.transferDirectory;
+  const root = options.getTransferDirectory();
   if (!root) return { ...uploadFailure('unsupported'), stage: 'upload' };
   const authorizationResult = await prepareUploadAuthorization(
     authorization,

@@ -71,7 +71,7 @@ export async function uploadOssBatch(
               { ...input, sourceUrl: item.sourceUrl },
               {
                 ...itemOptions,
-                transferDirectory: options.transferDirectory,
+                getTransferDirectory: options.getTransferDirectory,
                 createId: options.createId,
               },
             );

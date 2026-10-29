@@ -8,5 +8,5 @@ const bundle = buildBundle({ root: path.join(__dirname, '..') });
 assert(
   bundle['md/native-setup.md'].toString('utf8').includes('onRequestComplete'),
 );
-assert(bundle['md/api.md'].toString('utf8').includes('transferDirectory'));
+assert(bundle['md/api.md'].toString('utf8').includes('getTransferDirectory'));
 console.log('PASS OSS API 与宿主终态契约进入 LLM 资料');

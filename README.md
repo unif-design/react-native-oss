@@ -38,7 +38,7 @@ const result = await uploadOssFile(
 - `readOssCredential`：验证、投影并冻结临时凭证。
 - `createOssCredentialAccess(request, allowedKeys)`：在授权实例与 key 白名单内复用凭证，身份失效时调用 `dispose()`。
 - `uploadOssFile`：上传调用方文件，保留成功、取消、明确拒绝与未确认结果。
-- `transferRemoteFileToOss`：宿主注入私有 `transferDirectory` 和唯一 `createId`，先下载再上传，等待原生读取结束后释放临时文件。
+- `transferRemoteFileToOss`：宿主注入私有目录读取函数 `getTransferDirectory` 和唯一 `createId`，先下载再上传，等待原生读取结束后释放临时文件。
 - `uploadOssBatch`：同一授权、输入顺序、逐项回执，取消后未开始项保持 `not_started`。
 
 输入、输出与回调类型均从包根导出。完整语义见 [API](docs/api.md)，所有权见 [行为契约](docs/contract.md)。

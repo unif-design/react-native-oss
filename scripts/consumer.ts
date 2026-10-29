@@ -29,7 +29,7 @@ const access = createOssCredentialAccess(
 const options = {
   authorization: { kind: 'managed' as const, access, ossKey: 'private-media' },
   signal,
-  transferDirectory: 'file:///private/transfers',
+  getTransferDirectory: () => 'file:///private/transfers',
   createId: () => 'fixture-unique-id',
 };
 const upload: Promise<OssUploadResult> = uploadOssFile(
