@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
+import { join } from 'node:path';
 import { runInNewContext } from 'node:vm';
 import { transformSync } from '@babel/core';
 
@@ -77,7 +78,11 @@ function loadFetch(nativeAvailable = true) {
     });
     return module.exports;
   }
-  const sdk = loadSdkModule(require.resolve('react-native-blob-util/fetch'));
+  const sdk = loadSdkModule(
+    process.env.OSS_SDK_ROOT
+      ? join(process.env.OSS_SDK_ROOT, 'fetch.js')
+      : require.resolve('react-native-blob-util/fetch'),
+  );
   function request() {
     return sdk
       .config({ followRedirect: false })

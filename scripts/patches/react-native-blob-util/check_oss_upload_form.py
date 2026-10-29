@@ -1,7 +1,10 @@
+import os, json
 from pathlib import Path
 import subprocess,tempfile
 root=Path(__file__).resolve().parents[3]
-source=(root/'node_modules/react-native-blob-util/ios/ReactNativeBlobUtilReqBuilder.mm').read_text()
+sdk=Path(os.environ.get('OSS_SDK_ROOT', root/'node_modules/react-native-blob-util'))
+assert json.loads((sdk/'package.json').read_text())['version'] == '0.25.1'
+source=(sdk/'ios/ReactNativeBlobUtilReqBuilder.mm').read_text()
 start=source.index('+(void) buildFormBody:')
 end=source.index('\n+(NSString *) getHeaderIgnoreCases:',start)
 method=source[start:end]

@@ -45,7 +45,7 @@ export default function Home() {
         </section>
         <h2>从真实原生 example 开始</h2>
         <p>
-          iOS / Android 工程与 SDK 补丁随仓库维护。Web
+          iOS / Android 工程随仓库维护，SDK 补丁由宿主统一准备。Web
           展示接入文档，原生能力通过开发构建运行。
         </p>
         <Link to="/docs/development">查看开发与分层验证 →</Link>

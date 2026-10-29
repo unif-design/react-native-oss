@@ -34,6 +34,7 @@ const result = await uploadOssFile(
 
 ## 公共 API
 
+- `createOssCredentialFailure`：宿主换发适配复用同一失败结果和固定文案。
 - `readOssCredential`：验证、投影并冻结临时凭证。
 - `createOssCredentialAccess(request, allowedKeys)`：在授权实例与 key 白名单内复用凭证，身份失效时调用 `dispose()`。
 - `uploadOssFile`：上传调用方文件，保留成功、取消、明确拒绝与未确认结果。

@@ -23,6 +23,8 @@ access.dispose(); // 退出或身份变化时同步失效此授权实例
 
 凭证结果为 `success`（只读 credential）、`cancelled` 或 `failed`（`error.reason/message`，可选 `businessCode`）。失败 reason 为 `access`、`rejected`、`invalid_response`、`invalid_credential`、`unavailable`；宿主的换发适配负责转换后端响应。
 
+`createOssCredentialFailure(reason, businessCode?)` 供宿主换发适配构造相同的受控失败结果，复用固定错误文案。reason 使用 `OssCredentialErrorReason`；业务码须先由宿主响应校验确认。后端原始错误正文不作为该接口输入。
+
 ## 单文件上传
 
 `uploadOssFile(input, options): Promise<OssUploadResult>`

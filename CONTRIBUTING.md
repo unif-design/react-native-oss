@@ -1,89 +1,39 @@
-# Contributing
+# 参与开发
 
-Contributions are always welcome, no matter how large or small!
+本仓使用 Yarn workspaces：库位于根目录，真实原生示例位于 `example/`，Docusaurus 文档站位于 `website/`。Node 和 Yarn 版本以 `.nvmrc`、`package.json` 为准，开发与交付入口见 [AGENTS.md](AGENTS.md) 和 [研发说明](docs/DEVELOPMENT.md)。
 
-We want this community to be friendly and respectful to each other. Please follow it in all your interactions with the project. Before contributing, please read the [code of conduct](./CODE_OF_CONDUCT.md).
-
-## Development workflow
-
-This project is a monorepo managed using [Yarn workspaces](https://yarnpkg.com/features/workspaces). It contains the following packages:
-
-- The library package in the root directory.
-- An example app in the `example/` directory.
-
-To get started with the project, make sure you have the correct version of [Node.js](https://nodejs.org/) installed. See the [`.nvmrc`](./.nvmrc) file for the version used in this project.
-
-Run `yarn` in the root directory to install the required dependencies for each package:
+## 开发与验证
 
 ```sh
-yarn
+yarn install
+yarn lint
+yarn typecheck
+yarn test
+yarn build
+yarn verify:consumer
+yarn website test
+yarn website build
 ```
 
-> Since the project relies on Yarn workspaces, you cannot use [`npm`](https://github.com/npm/cli) for development without manually migrating.
+`verify:consumer` 在独立临时目录安装真实 tarball，检查公开声明和共享 logger 解析。首次发行前可显式传入同批 Files 候选 tarball；该结果不能标为 registry 正式版本消费。
 
-The [example app](/example/) demonstrates usage of the library. You need to run it to test any changes you make.
-
-It is configured to use the local version of the library, so any changes you make to the library's source code will be reflected in the example app. Changes to the library's JavaScript code will be reflected in the example app without a rebuild, but native code changes will require a rebuild of the example app.
-
-You can use various commands from the root directory to work with the project.
-
-To start the packager:
+本库依赖宿主准备后的精确 SDK 行为，依赖安装本身不会应用补丁。Portal 是补丁唯一维护方；在本库 example 或干净消费者中，由宿主从同一来源显式准备实际 SDK 副本并重新构建，步骤见 [原生接线](docs/native-setup.md)。
 
 ```sh
+yarn test:sdk
+yarn test:native:android
+yarn test:native:ios
 yarn example start
-```
-
-To run the example app on Android:
-
-```sh
 yarn example android
-```
-
-To run the example app on iOS:
-
-```sh
 yarn example ios
 ```
 
-Make sure your code passes TypeScript:
+SDK 验证只读取实现；外部宿主可用 `OSS_SDK_ROOT` 指向其真实 BlobUtil 安装目录。保留取消后的原生结束通知、身份隔离和文件所有权测试，不能把 JS Promise settle 当作原生读取完成。类型、逻辑测试、原生构建、设备和真实服务结果分别说明。
 
-```sh
-yarn typecheck
-```
+## 提交与发布
 
-To check for linting errors, run the following:
+修改前核对实际消费者与当前契约，只修改当前范围和必要接线。提交、PR 标题及描述使用中文，类型前缀保留 Conventional Commits 格式；公共 API 变化同步类型、文档、example 和消费者验证。
 
-```sh
-yarn lint
-```
+使用组织标准 PR、CI、规则集及发布机器人链路，正式 npm 版本由 `release.yml` 经 Trusted Publisher / OIDC 发布，不通过本机发布绕过门禁。首次包身份与引导候选按组织标准处理，待审占位版本不算交付。SDK 补丁和私有应用配置不复制进入公开包。
 
-To fix formatting errors, run the following:
-
-```sh
-yarn lint --fix
-```
-
-
-
-### Scripts
-
-The `package.json` file contains various scripts for common tasks:
-
-- `yarn`: setup project by installing dependencies.
-- `yarn typecheck`: type-check files with TypeScript.
-- `yarn lint`: lint files with [ESLint](https://eslint.org/).
-- `yarn example start`: start the Metro server for the example app.
-- `yarn example android`: run the example app on Android.
-- `yarn example ios`: run the example app on iOS.
-
-### Sending a pull request
-
-> **Working on your first pull request?** You can learn how from this _free_ series: [How to Contribute to an Open Source Project on GitHub](https://app.egghead.io/playlists/how-to-contribute-to-an-open-source-project-on-github).
-
-When you're sending a pull request:
-
-- Prefer small pull requests focused on one change.
-- Verify that linters and tests are passing.
-- Review the documentation to make sure it looks good.
-- Follow the pull request template when opening a pull request.
-- For pull requests that change the API or implementation, discuss with maintainers first by opening an issue.
+交流遵循 [行为准则](CODE_OF_CONDUCT.md)，安全问题使用 [安全报告入口](SECURITY.md)。

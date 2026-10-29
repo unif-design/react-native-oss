@@ -1,3 +1,4 @@
+export { credentialFailure as createOssCredentialFailure } from './credentialFailure';
 export { createOssCredentialAccess } from './createOssCredentialAccess';
 export type {
   OssKey,

@@ -1,8 +1,11 @@
+import os, json
 from pathlib import Path
 import subprocess, tempfile
 
 repo = Path(__file__).resolve().parents[3]
-source = (repo / 'node_modules/react-native-blob-util/android/src/main/java/com/ReactNativeBlobUtil/ReactNativeBlobUtilBody.java').read_text()
+sdk = Path(os.environ.get('OSS_SDK_ROOT', repo/'node_modules/react-native-blob-util'))
+assert json.loads((sdk/'package.json').read_text())['version'] == '0.25.1'
+source = (sdk / 'android/src/main/java/com/ReactNativeBlobUtil/ReactNativeBlobUtilBody.java').read_text()
 
 def method(name):
     start = source.index('    private void ' + name + '(')

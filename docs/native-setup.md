@@ -27,6 +27,8 @@ description: SDK 精确版本、宿主补丁准备、终态通知与消费者验
 4. `yarn test:native:android` / `yarn test:native:ios` 从已安装 SDK 提取真实方法，检查异常源流关闭和表单结果。
 5. 构建 iOS / Android example，验证设备取消、终态与临时文件删除顺序，再以授权的短期 STS 验证真实 OSS。
 
+SDK 检查默认读取本库安装目录；验证外部干净宿主时，设置 `OSS_SDK_ROOT` 为该宿主实际解析的 `react-native-blob-util` 目录，再执行相同命令。检查只读取 SDK，不应用或维护补丁。
+
 标准 `yarn test` 检查库行为，SDK 契约通过独立 `test:sdk` 入口验证。CI 的库检查通过不代表宿主 SDK 已修补；发布验收必须另附准备后的 SDK、原生构建与消费者证据。替身、构建、设备和真实服务分别报告。
 
 `example/ios`、`example/android` 是真实原生工程，不支持用 Expo Go 替代。应用私有文件无需额外媒体权限；保留宿主网络策略，不关闭 TLS。示例只在页面内存接收临时凭证，不记录或持久化。
