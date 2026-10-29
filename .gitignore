@@ -79,3 +79,5 @@ website/build/
 website/.docusaurus/
 website/static/llms*.txt
 *.tgz
+
+website/static/md/
