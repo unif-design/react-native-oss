@@ -59,6 +59,7 @@ export async function uploadOssBatch(
       path: item.path,
       ...(item.mimeType === undefined ? {} : { mimeType: item.mimeType }),
       ...(item.maxBytes === undefined ? {} : { maxBytes: item.maxBytes }),
+      ...(item.urlMode === undefined ? {} : { urlMode: item.urlMode }),
     };
     try {
       results[index].result =

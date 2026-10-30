@@ -37,11 +37,28 @@ const upload: Promise<OssUploadResult> = uploadOssFile(
   { ...options, onSourceReleased: async () => {} },
 );
 const transfer: Promise<OssTransferResult> = transferRemoteFileToOss(
-  { sourceUrl: 'https://fixture.invalid/file', path: 'object' },
+  {
+    sourceUrl: 'https://fixture.invalid/file',
+    path: 'object',
+    urlMode: 'origin',
+  },
   options,
 );
 const batch: Promise<OssBatchResult> = uploadOssBatch(
-  [{ kind: 'local', fileUri: 'file:///private/source', path: 'object' }],
+  [
+    {
+      kind: 'local',
+      fileUri: 'file:///private/source',
+      path: 'object',
+      urlMode: 'origin',
+    },
+    {
+      kind: 'remote',
+      sourceUrl: 'https://fixture.invalid/file',
+      path: 'remote-object',
+      urlMode: 'configured',
+    },
+  ],
   options,
 );
 export { failure, checked, upload, transfer, batch };

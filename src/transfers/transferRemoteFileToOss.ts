@@ -50,11 +50,12 @@ export async function transferRemoteFileToOss(
 ): Promise<OssTransferResult> {
   const { signal, onProgress, authorization, createId } = options;
   if (signal?.aborted) return { status: 'cancelled' };
-  const { sourceUrl, path, mimeType, maxBytes } = input;
+  const { sourceUrl, path, mimeType, maxBytes, urlMode } = input;
   const objectInput = {
     path,
     ...(mimeType === undefined ? {} : { mimeType }),
     ...(maxBytes === undefined ? {} : { maxBytes }),
+    ...(urlMode === undefined ? {} : { urlMode }),
   };
   const prepared = prepareUploadObject(objectInput);
   if (!validSource(sourceUrl) || !prepared)
