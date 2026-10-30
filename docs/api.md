@@ -51,7 +51,7 @@ input 使用 `sourceUrl` 替代 `fileUri`；其余字段与上传一致。option
 
 目录函数在输入和取消校验之后、凭证准备之前按需调用；本地上传、无效输入及提前取消不读取转存目录。授权和目标验证先于下载。仅 HTTP 200 且文件落地后上传，保留签名 URL 原字节。下载失败标识 `stage: 'download'`，上传失败为 `stage: 'upload'`。交给上传后的临时文件等待 `onSourceReleased` 才释放。`maxBytes` 不改变下载默认策略。
 
-现有转存和批量组合没有向内部上传传递 `urlMode`；本包保留这一行为。直接单文件上传仍支持 `urlMode`。
+转存输入和批量各项的 `urlMode` 与单文件上传一致：省略或设为 `configured` 时沿用配置地址，设为 `origin` 时返回 OSS 原始地址。该选项只影响成功回执中的 `url`，不改变上传目标或对象路径；非法值按 `invalid_input` 处理。
 
 ## 顺序批量
 
