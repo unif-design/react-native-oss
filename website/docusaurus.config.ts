@@ -3,7 +3,7 @@ import type * as Preset from '@docusaurus/preset-classic';
 
 const config: Config = {
   title: 'Unif OSS',
-  tagline: '临时授权、明确回执、受控文件交接',
+  tagline: 'React Native OSS 文件上传、远程转存与顺序批量',
   url: 'https://unif-design.github.io',
   baseUrl: '/react-native-oss/',
   organizationName: 'unif-design',

@@ -11,12 +11,13 @@ export default function Home() {
       <main className="container unif-home oss-home">
         <p className="oss-eyebrow">UNIF · REACT NATIVE</p>
         <h1>
-          上传有回执，
+          上传本地文件，
           <br />
-          文件有归属。
+          转存远程资源。
         </h1>
         <p className="oss-lead">
-          以临时凭证上传本地文件，转存远程资源，在取消和并发中保持清晰的授权与释放边界。
+          使用临时 STS
+          上传文件，支持远程转存与顺序批量，分别交付上传结果和源文件读取结束通知。
         </p>
         <div className="oss-actions">
           <Link className="button button--primary button--lg" to="/docs/api">
@@ -32,7 +33,9 @@ export default function Home() {
         <section className="oss-grid" aria-label="核心能力">
           <article>
             <h2>临时授权</h2>
-            <p>验证 STS、限定 key 范围，按授权实例缓存，随身份失效。</p>
+            <p>
+              验证 STS、限定 key 范围，按实例缓存；身份变化时由应用释放实例。
+            </p>
           </article>
           <article>
             <h2>明确回执</h2>
@@ -40,7 +43,9 @@ export default function Home() {
           </article>
           <article>
             <h2>文件交接</h2>
-            <p>原生停止读取后释放源文件，远程转存清理自己拥有的临时产物。</p>
+            <p>
+              通知调用方何时可释放源文件；远程转存只清理自身创建的临时文件。
+            </p>
           </article>
         </section>
         <h2>从真实原生 example 开始</h2>

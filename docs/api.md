@@ -14,7 +14,10 @@ description: 临时凭证、单文件上传、转存与顺序批量的公开接�
 `readOssCredential(value: unknown): Readonly<OssCredential> | null` 校验签名字段、目标和带明确时区的合法 ISO 时间。剩余有效期必须大于 30 秒。只投影已知字段并冻结，`rootPath` 必须提供但可为空；`baseUrl` 无效不使可签名凭证失败。
 
 ```ts
-const access = createOssCredentialAccess(requestCredential, ['public-media', 'private-media']);
+const access = createOssCredentialAccess(requestCredential, [
+  'public-media',
+  'private-media',
+]);
 const result = await access.get('private-media', { signal });
 access.dispose(); // 退出或身份变化时同步失效此授权实例
 ```
@@ -29,17 +32,17 @@ access.dispose(); // 退出或身份变化时同步失效此授权实例
 
 `uploadOssFile(input, options): Promise<OssUploadResult>`
 
-| 参数 | 契约 |
-| --- | --- |
-| `input.fileUri` | 调用方拥有的本地文件 `file:///` URI |
-| `input.path` | 相对对象路径，拒绝 `.` / `..` 段 |
-| `input.mimeType` | 可选，按扩展名推断或使用 `application/octet-stream` |
-| `input.maxBytes` | 可选非负安全整数，仅写入上传 policy 的长度条件 |
-| `input.urlMode` | 可选 `configured` / `origin`，默认采用有效 `baseUrl` |
-| `options.authorization` | `{ kind: 'provided', credential }` 或 `{ kind: 'managed', access, ossKey }` |
-| `options.signal` | 可选取消信号 |
-| `options.onProgress` | `{ sentBytes, totalBytes? }`，异常不改变回执 |
-| `options.onSourceReleased` | 原生停止读取后最多调用一次，允许异步收尾 |
+| 参数                       | 契约                                                                        |
+| -------------------------- | --------------------------------------------------------------------------- |
+| `input.fileUri`            | 调用方拥有的本地文件 `file:///` URI                                         |
+| `input.path`               | 相对对象路径，拒绝 `.` / `..` 段                                            |
+| `input.mimeType`           | 可选，按扩展名推断或使用 `application/octet-stream`                         |
+| `input.maxBytes`           | 可选非负安全整数，仅写入上传 policy 的长度条件                              |
+| `input.urlMode`            | 可选 `configured` / `origin`，默认采用有效 `baseUrl`                        |
+| `options.authorization`    | `{ kind: 'provided', credential }` 或 `{ kind: 'managed', access, ossKey }` |
+| `options.signal`           | 可选取消信号                                                                |
+| `options.onProgress`       | `{ sentBytes, totalBytes? }`，异常不改变回执                                |
+| `options.onSourceReleased` | 确认不再读取源文件后最多调用一次，允许异步收尾；上传结果不等待该回调完成    |
 
 只有 HTTP 200 / 204 返回 `success` 与 `{ bucketName, objectKey, url? }`。4xx / 5xx 为 `rejected`；其他回执、缺失回执或不可判定网络结果为 `unconfirmed`。取消不撤销已取得的明确成功或拒绝回执。错误 reason 还包括 `invalid_input`、`credential`、`signing`、`unsupported`。
 
@@ -52,6 +55,8 @@ input 使用 `sourceUrl` 替代 `fileUri`；其余字段与上传一致。option
 目录函数在输入和取消校验之后、凭证准备之前按需调用；本地上传、无效输入及提前取消不读取转存目录。授权和目标验证先于下载。仅 HTTP 200 且文件落地后上传，保留签名 URL 原字节。下载失败标识 `stage: 'download'`，上传失败为 `stage: 'upload'`。交给上传后的临时文件等待 `onSourceReleased` 才释放。`maxBytes` 不改变下载默认策略。
 
 转存输入和批量各项的 `urlMode` 与单文件上传一致：省略或设为 `configured` 时沿用配置地址，设为 `origin` 时返回 OSS 原始地址。该选项只影响成功回执中的 `url`，不改变上传目标或对象路径；非法值按 `invalid_input` 处理。
+
+文件交给上传后，清理由释放回调触发，转存 Promise 不等待该异步删除完成；清理失败记录日志并保留上传回执。
 
 ## 顺序批量
 
