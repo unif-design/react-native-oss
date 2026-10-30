@@ -17,10 +17,6 @@ function run(command, args, cwd = temporary) {
   });
 }
 
-// 首次发行前允许显式提供同批 Files tarball，不能据此宣称 registry 消费成功。
-const filesTarball = process.argv[2]
-  ? path.resolve(process.argv[2])
-  : undefined;
 try {
   const packResult = JSON.parse(
     run(
@@ -38,9 +34,7 @@ try {
   );
   const dependencies = {
     '@unif/react-native-oss': `file:${path.join(temporary, packed.filename)}`,
-    '@unif/react-native-files': filesTarball
-      ? `file:${filesTarball}`
-      : pkg.peerDependencies['@unif/react-native-files'],
+    '@unif/react-native-files': pkg.devDependencies['@unif/react-native-files'],
     '@unif/react-native-logger':
       pkg.devDependencies['@unif/react-native-logger'],
     'react': pkg.devDependencies.react,
@@ -116,7 +110,13 @@ try {
     JSON.stringify(
       {
         oss: installed.version,
-        filesFrom: filesTarball ? 'supplied-tarball' : 'registry',
+        files: require(
+          path.join(
+            temporary,
+            'node_modules/@unif/react-native-files/package.json',
+          ),
+        ).version,
+        filesFrom: 'registry',
         publicTypes: true,
         sharedLogger: true,
         nativePatchesApplied: false,

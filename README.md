@@ -7,7 +7,7 @@ React Native 的 OSS 临时凭证验证与内存缓存、单文件 PostObject �
 ## 安装
 
 ```sh
-yarn add @unif/react-native-oss @unif/react-native-files @unif/react-native-logger react-native-blob-util@0.25.1
+yarn add @unif/react-native-oss '@unif/react-native-files@^0.1.0' @unif/react-native-logger react-native-blob-util@0.25.1
 ```
 
 React 19.3 / React Native 0.88 是验证基线。宿主同时需要按 [Files 接入文档](https://unif-design.github.io/react-native-files/)安装其原生 peer 依赖及补丁。

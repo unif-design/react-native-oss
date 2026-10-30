@@ -15,7 +15,7 @@ yarn website test
 yarn website build
 ```
 
-`verify:consumer` 在独立临时目录安装真实 tarball，检查公开声明和共享 logger 解析。首次发行前可显式传入同批 Files 候选 tarball；该结果不能标为 registry 正式版本消费。
+`verify:consumer` 在独立临时目录安装本库真实 tarball，并按开发依赖范围从 npm registry 安装已发布的 Files，检查公开声明和共享 logger 解析；核验记录包含实际安装版本。
 
 本库依赖宿主准备后的精确 SDK 行为，依赖安装本身不会应用补丁。Portal 是补丁唯一维护方；在本库 example 或干净消费者中，由宿主从同一来源显式准备实际 SDK 副本并重新构建，步骤见 [原生接线](docs/native-setup.md)。
 
