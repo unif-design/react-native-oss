@@ -1,6 +1,6 @@
 {
   "name": "@unif/react-native-oss",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "React Native OSS 临时凭证、上传与转存",
   "main": "./lib/module/index.js",
   "types": "./lib/typescript/src/index.d.ts",
