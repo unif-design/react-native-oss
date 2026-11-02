@@ -892,3 +892,94 @@ test('需要源文件地址时使用实际上传端点和对象键，保留配�
     },
   });
 });
+
+test('真实凭证 access 挂起时取消即释放尚未读取的文件，迟到凭证不启动上传', async () => {
+  const pending = deferred<OssCredentialResult>();
+  const access = oss.createOssCredentialAccess(
+    () => pending.promise,
+    ['osspublic'],
+  );
+  const controller = new AbortController();
+  const release = jest.fn();
+  const received = jest.fn();
+  const waiting = oss.uploadOssFile(input, {
+    authorization: { kind: 'managed', access, ossKey: 'osspublic' },
+    signal: controller.signal,
+    onSourceReleased: release,
+  });
+  waiting.then(received);
+  controller.abort();
+  for (let turn = 0; turn < 8; turn += 1) await Promise.resolve();
+  expect(received).toHaveBeenCalledWith({ status: 'cancelled' });
+  expect(release).toHaveBeenCalledTimes(1);
+  expect(fetch).not.toHaveBeenCalled();
+  pending.resolve({ status: 'success', credential: credential() });
+  for (let turn = 0; turn < 8; turn += 1) await Promise.resolve();
+  expect(release).toHaveBeenCalledTimes(1);
+  expect(fetch).not.toHaveBeenCalled();
+  access.dispose();
+});
+test('发送边界在凭证成功后、原生 fetch 前交付原对象身份，不记录凭证', async () => {
+  const native = task();
+  const authorization = deferred<OssCredentialResult>();
+  const onRequestStarted = jest.fn((object) => {
+    expect(fetch).not.toHaveBeenCalled();
+    expect(object).toEqual({
+      bucketName: 'fixture-bucket',
+      objectKey: 'logs/photo.jpg',
+      url: expect.any(String),
+    });
+  });
+  const pending = oss.uploadOssFile(input, {
+    authorization: {
+      kind: 'managed',
+      access: { get: () => authorization.promise, dispose: jest.fn() },
+      ossKey: 'osspublic',
+    },
+    onRequestStarted,
+  });
+  await started();
+  expect(onRequestStarted).not.toHaveBeenCalled();
+  expect(fetch).not.toHaveBeenCalled();
+  authorization.resolve({ status: 'success', credential: credential() });
+  await started();
+  expect(onRequestStarted).toHaveBeenCalledTimes(1);
+  expect(fetch).toHaveBeenCalledTimes(1);
+  native.respond(204);
+  await expect(pending).resolves.toMatchObject({
+    status: 'success',
+    object: onRequestStarted.mock.calls[0][0],
+  });
+});
+
+test('原操作记录失败阻止真正发送且归还源文件', async () => {
+  const onSourceReleased = jest.fn();
+  await expect(
+    oss.uploadOssFile(input, {
+      authorization: provided(),
+      onRequestStarted() {
+        throw new Error('record failed');
+      },
+      onSourceReleased,
+    }),
+  ).rejects.toThrow('record failed');
+  expect(fetch).not.toHaveBeenCalled();
+  expect(onSourceReleased).toHaveBeenCalledTimes(1);
+});
+
+test('发送前回调取消时不启动原生读取，并归还源文件', async () => {
+  const controller = new AbortController();
+  const onSourceReleased = jest.fn();
+  const onRequestStarted = jest.fn(() => controller.abort());
+  await expect(
+    oss.uploadOssFile(input, {
+      authorization: provided(),
+      signal: controller.signal,
+      onRequestStarted,
+      onSourceReleased,
+    }),
+  ).resolves.toEqual({ status: 'cancelled' });
+  expect(onRequestStarted).toHaveBeenCalledTimes(1);
+  expect(fetch).not.toHaveBeenCalled();
+  expect(onSourceReleased).toHaveBeenCalledTimes(1);
+});

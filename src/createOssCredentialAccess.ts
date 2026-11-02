@@ -3,6 +3,7 @@ import {
   createOperationContext,
   getFailureDiagnostics,
 } from '@unif/react-native-logger';
+import { waitForOssCredential } from './waitForOssCredential';
 import { OSS_CREDENTIAL_MARGIN_MS } from './constants';
 import { credentialFailure } from './credentialFailure';
 import { readOssCredential } from './readOssCredential';
@@ -20,12 +21,19 @@ export function createOssCredentialAccess(
 ): OssCredentialAccess {
   const keys = [...allowedKeys];
   const cache = new Map<OssKey, Readonly<OssCredential>>();
-  let disposed = false;
+  const lifetime = new AbortController();
   return {
     async get(key, options) {
-      if (disposed || !keys.includes(key)) return credentialFailure('access');
+      if (lifetime.signal.aborted || !keys.includes(key))
+        return credentialFailure('access');
       const signal = options?.signal;
       if (signal?.aborted) return { status: 'cancelled' };
+      if (cache.has(key)) {
+        // 缓存也在交付时检查取消、授权生命周期和剩余有效期。
+        await Promise.resolve();
+        if (lifetime.signal.aborted) return credentialFailure('access');
+        if (signal?.aborted) return { status: 'cancelled' };
+      }
       const cached = cache.get(key);
       if (
         cached &&
@@ -36,12 +44,13 @@ export function createOssCredentialAccess(
       cache.delete(key);
       const context = createOperationContext('system');
       try {
-        const result = await requestCredential(
-          key,
-          signal ? { signal } : undefined,
+        const result = await waitForOssCredential(
+          (requestSignal) => requestCredential(key, { signal: requestSignal }),
+          [signal, lifetime.signal],
         );
-        if (disposed) return credentialFailure('access');
-        if (signal?.aborted) return { status: 'cancelled' };
+        if (lifetime.signal.aborted) return credentialFailure('access');
+        if (signal?.aborted || result.status === 'cancelled')
+          return { status: 'cancelled' };
         if (result.status !== 'success') return result;
         const credential = readOssCredential(result.credential);
         if (!credential) {
@@ -60,7 +69,7 @@ export function createOssCredentialAccess(
         cache.set(key, credential);
         return { status: 'success', credential };
       } catch (error) {
-        if (disposed) return credentialFailure('access');
+        if (lifetime.signal.aborted) return credentialFailure('access');
         if (!signal?.aborted)
           createLogger('oss.credentials').warn('credential.request_failed', {
             context,
@@ -75,8 +84,8 @@ export function createOssCredentialAccess(
       }
     },
     dispose() {
-      disposed = true;
       cache.clear();
+      lifetime.abort();
     },
   };
 }

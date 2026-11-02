@@ -15,6 +15,12 @@ import {
   uploadOssBatch,
 } from '@unif/react-native-oss';
 import { credential, deferred, now } from '../credentialFixture';
+import type {
+  OssUploadedObject,
+  OssTransferOptions,
+  OssBatchOptions,
+  OssBatchItem,
+} from '@unif/react-native-oss';
 import type { DownloadFileOptionsT } from '@dr.pogodin/react-native-fs';
 
 jest.mock('@dr.pogodin/react-native-fs', () => ({
@@ -313,4 +319,220 @@ test('真实 RN URL 下远程转存与公共下载一致接受大写 HTTPS，原
   } finally {
     global.URL = previous;
   }
+});
+
+function transferWithHost(
+  value: Parameters<typeof transferRemoteFileToOss>[0],
+  options: Omit<OssTransferOptions, 'getTransferDirectory' | 'createId'>,
+) {
+  return transferRemoteFileToOss(value, withTransferOptions(options));
+}
+function batchWithHost(
+  items: readonly OssBatchItem[],
+  options: Omit<OssBatchOptions, 'getTransferDirectory' | 'createId'>,
+) {
+  return uploadOssBatch(items, withTransferOptions(options));
+}
+
+test.each([
+  [undefined, 'https://cdn.example.test/media/destination/data.bin'],
+  ['configured', 'https://cdn.example.test/media/destination/data.bin'],
+  [
+    'origin',
+    'https://fixture-bucket.oss-cn-example.aliyuncs.com/logs/destination/data.bin',
+  ],
+] as const)(
+  '远程转存采用 urlMode=%p，并在原生发送前交付同一对象',
+  async (urlMode, url) => {
+    const native = nativeUpload();
+    const started: {
+      object: Readonly<OssUploadedObject>;
+      frozen: boolean;
+      sent: number;
+    }[] = [];
+    const result = transferWithHost(
+      { ...input, urlMode },
+      {
+        authorization: {
+          kind: 'provided',
+          credential: credential({
+            baseUrl: 'https://cdn.example.test/media/',
+          }),
+        },
+        onRequestStarted: (object) => {
+          started.push({
+            object,
+            frozen: Object.isFrozen(object),
+            sent: fetch.mock.calls.length,
+          });
+        },
+      },
+    );
+    native.respond(200);
+    const receipt = await result;
+    native.complete();
+    await flush();
+    expect(receipt).toStrictEqual({
+      status: 'success',
+      object: {
+        bucketName: 'fixture-bucket',
+        objectKey: 'logs/destination/data.bin',
+        url,
+      },
+    });
+    expect(started).toStrictEqual([
+      {
+        object: {
+          bucketName: 'fixture-bucket',
+          objectKey: 'logs/destination/data.bin',
+          url,
+        },
+        frozen: true,
+        sent: 0,
+      },
+    ]);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(files.size).toBe(0);
+  },
+);
+test('远程转存发送前记录失败时不上传，并释放已下载的临时文件', async () => {
+  const native = nativeUpload();
+  const result = transferWithHost(input, {
+    ...provided(),
+    onRequestStarted: () => {
+      throw new Error('对象记录未保存');
+    },
+  });
+  native.respond(200);
+  const receipt = await result;
+  await flush();
+  expect(receipt).toMatchObject({ status: 'failed', stage: 'upload' });
+  expect(fetch).not.toHaveBeenCalled();
+  expect(downloadFile).toHaveBeenCalledTimes(1);
+  expect(files.size).toBe(0);
+  expect(unlink).toHaveBeenCalledTimes(1);
+});
+test('批量本地和远程项目各自采用地址模式，发送前记录归原对象且不提前释放源文件', async () => {
+  const requests = [nativeUpload(), nativeUpload(), nativeUpload()];
+  const started: Readonly<OssUploadedObject>[] = [];
+  const result = batchWithHost(
+    [
+      {
+        kind: 'local',
+        fileUri: 'file:///private/local',
+        path: 'local',
+        urlMode: 'origin',
+      },
+      {
+        kind: 'remote',
+        sourceUrl: input.sourceUrl,
+        path: 'remote',
+        urlMode: 'origin',
+      },
+      {
+        kind: 'local',
+        fileUri: 'file:///private/configured',
+        path: 'configured',
+        urlMode: 'configured',
+      },
+    ],
+    {
+      authorization: {
+        kind: 'provided',
+        credential: credential({ baseUrl: 'https://cdn.example.test/media/' }),
+      },
+      onRequestStarted: (object) => {
+        started.push(object);
+      },
+    },
+  );
+  for (const request of requests) request.respond(200);
+  const receipt = await result;
+  expect(receipt.items.map((item) => item.result)).toStrictEqual([
+    {
+      status: 'success',
+      object: {
+        bucketName: 'fixture-bucket',
+        objectKey: 'logs/local',
+        url: 'https://fixture-bucket.oss-cn-example.aliyuncs.com/logs/local',
+      },
+    },
+    {
+      status: 'success',
+      object: {
+        bucketName: 'fixture-bucket',
+        objectKey: 'logs/remote',
+        url: 'https://fixture-bucket.oss-cn-example.aliyuncs.com/logs/remote',
+      },
+    },
+    {
+      status: 'success',
+      object: {
+        bucketName: 'fixture-bucket',
+        objectKey: 'logs/configured',
+        url: 'https://cdn.example.test/media/configured',
+      },
+    },
+  ]);
+  expect(started.map((object) => object.objectKey)).toStrictEqual([
+    'logs/local',
+    'logs/remote',
+    'logs/configured',
+  ]);
+  expect(files.size).toBe(1);
+  expect(unlink).not.toHaveBeenCalled();
+  for (const request of requests) request.complete();
+  await flush();
+  expect(unlink).toHaveBeenCalledTimes(1);
+  expect(files.size).toBe(0);
+});
+test('批量远程项记录失败时沿转存失败结果收尾，仍处理后续项目', async () => {
+  const native = nativeUpload();
+  const result = batchWithHost(
+    [
+      { kind: 'remote', sourceUrl: input.sourceUrl, path: 'blocked' },
+      { kind: 'local', fileUri: 'file:///private/next', path: 'next' },
+    ],
+    {
+      ...provided(),
+      onRequestStarted: (object) => {
+        if (object.objectKey === 'logs/blocked')
+          throw new Error('对象记录未保存');
+      },
+    },
+  );
+  native.respond(200);
+  const receipt = await result;
+  native.complete();
+  await flush();
+  expect(receipt.items[0].result).toMatchObject({ status: 'failed' });
+  expect(receipt.items[1].result).toMatchObject({
+    status: 'success',
+    object: { objectKey: 'logs/next' },
+  });
+  expect(fetch).toHaveBeenCalledTimes(1);
+  expect(fetch.mock.calls[0][3]).toContainEqual({
+    name: 'key',
+    data: 'logs/next',
+  });
+  expect(files.size).toBe(0);
+});
+test('批量本地项的发送前记录异常沿单文件接口上抛，不继续发送', async () => {
+  await expect(
+    batchWithHost(
+      [
+        { kind: 'local', fileUri: 'file:///private/blocked', path: 'blocked' },
+        { kind: 'local', fileUri: 'file:///private/next', path: 'next' },
+      ],
+      {
+        ...provided(),
+        onRequestStarted: () => {
+          throw new Error('对象记录未保存');
+        },
+      },
+    ),
+  ).rejects.toThrow('对象记录未保存');
+  expect(fetch).not.toHaveBeenCalled();
+  expect(downloadFile).not.toHaveBeenCalled();
+  expect(unlink).not.toHaveBeenCalled();
 });

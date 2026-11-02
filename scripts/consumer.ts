@@ -12,6 +12,7 @@ import type {
   OssUploadResult,
   OssTransferResult,
   OssBatchResult,
+  OssUploadedObject,
 } from '@unif/react-native-oss';
 
 declare const value: unknown;
@@ -29,6 +30,10 @@ const access = createOssCredentialAccess(
 const options = {
   authorization: { kind: 'managed' as const, access, ossKey: 'private-media' },
   signal,
+  onRequestStarted(object: Readonly<OssUploadedObject>) {
+    const objectKey: string = object.objectKey;
+    return objectKey;
+  },
   getTransferDirectory: () => 'file:///private/transfers',
   createId: () => 'fixture-unique-id',
 };

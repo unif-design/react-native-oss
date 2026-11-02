@@ -26,6 +26,8 @@ export interface UploadOssFileOptions {
   authorization: OssAuthorization;
   signal?: AbortSignal;
   onProgress?(progress: Readonly<OssUploadProgress>): void;
+  /** 在交给传输层之前同步记录对象身份；抛出时不得发送。 */
+  onRequestStarted?(object: Readonly<OssUploadedObject>): void;
   onSourceReleased?(): void | Promise<void>;
 }
 export interface OssUploadedObject {

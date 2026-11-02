@@ -62,6 +62,10 @@ try {
     path.join(__dirname, 'consumer.ts'),
     path.join(temporary, 'consumer.ts'),
   );
+  fs.copyFileSync(
+    path.join(__dirname, 'consumer.test.cjs'),
+    path.join(temporary, 'consumer.test.cjs'),
+  );
   fs.writeFileSync(
     path.join(temporary, 'tsconfig.json'),
     JSON.stringify({
@@ -83,6 +87,37 @@ try {
     'node_modules/typescript/bin/tsc',
     '--project',
     'tsconfig.json',
+  ]);
+  fs.writeFileSync(
+    path.join(temporary, 'jest.config.json'),
+    JSON.stringify({
+      rootDir: temporary,
+      testEnvironment: 'node',
+      testEnvironmentOptions: { customExportConditions: ['browser'] },
+      testMatch: ['<rootDir>/consumer.test.cjs'],
+      transform: {
+        '\\.js$': [
+          require.resolve('babel-jest'),
+          {
+            babelrc: false,
+            configFile: false,
+            plugins: [
+              require.resolve('@babel/plugin-transform-modules-commonjs'),
+            ],
+          },
+        ],
+      },
+      transformIgnorePatterns: [
+        '/node_modules/(?!(@unif/|react-native-url-polyfill/))',
+      ],
+    }),
+  );
+  run(process.execPath, [
+    require.resolve('jest/bin/jest'),
+    '--config',
+    'jest.config.json',
+    '--watchman=false',
+    '--runInBand',
   ]);
   const installed = require(
     path.join(temporary, 'node_modules/@unif/react-native-oss/package.json'),
@@ -118,6 +153,7 @@ try {
         ).version,
         filesFrom: 'registry',
         publicTypes: true,
+        browserBoundary: true,
         sharedLogger: true,
         nativePatchesApplied: false,
       },
@@ -126,7 +162,7 @@ try {
     ),
   );
   console.log(
-    `PASS actual tarball public types and shared logger; evidence: ${temporary}`,
+    `PASS actual tarball public types, browser boundary and shared logger; evidence: ${temporary}`,
   );
   console.log(
     'Native SDK patches, native builds, device and service behavior require prepared host validation.',
