@@ -26,6 +26,8 @@ yarn website build
 
 原生方法自检、原生构建与设备测试分别执行。公开消费使用真实 tarball 与生成声明，不能只依赖源码映射。发布通过组织 PR、CI、规则集、发布机器人及 Trusted Publisher / OIDC；首次包按组织标准建立身份。
 
+完成 `yarn build` 后运行 `yarn verify:consumer`，在独立目录安装实际 tarball，检查公开类型、共享 Logger 和浏览器入口的凭证／平台边界。浏览器入口检查使用现有 Jest／Babel 工具转换已安装产物，仅替换 React Native 平台边界；它不构建浏览器页面，也不应用宿主 SDK 补丁。
+
 网站使用 Docusaurus 和共享 LLM 生成器。本地检查不证明真机或真实 OSS 已验收。
 
 ## 交付配置与检查

@@ -17,6 +17,134 @@ jest.mock('@unif/react-native-logger', () => ({
 beforeEach(() => jest.useFakeTimers().setSystemTime(now));
 afterEach(() => jest.useRealTimers());
 
+test.each(['resolve', 'reject'] as const)(
+  '上游挂起时取消立即结束本地等待，迟到 %s 不覆盖另一个等待的有效缓存',
+  async (late) => {
+    const pending = deferred<OssCredentialResult>();
+    const current = credential({
+      securityToken: 'current-token',
+    }) as OssCredential;
+    const request = jest
+      .fn<ReturnType<OssCredentialRequest>, Parameters<OssCredentialRequest>>()
+      .mockReturnValueOnce(pending.promise)
+      .mockResolvedValue({ status: 'success', credential: current });
+    const access = createOssCredentialAccess(request, [
+      'osspublic',
+      'ossprivate',
+    ]);
+    const controller = new AbortController();
+    const waiting = access.get('osspublic', { signal: controller.signal });
+    const received = jest.fn();
+    waiting.then(received);
+    controller.abort();
+    for (let turn = 0; turn < 8; turn += 1) await Promise.resolve();
+    expect(received).toHaveBeenCalledWith({ status: 'cancelled' });
+    expect(request.mock.calls[0][1]?.signal?.aborted).toBe(true);
+    expect(await access.get('osspublic')).toEqual({
+      status: 'success',
+      credential: current,
+    });
+    if (late === 'resolve')
+      pending.resolve({
+        status: 'success',
+        credential: credential() as OssCredential,
+      });
+    else pending.reject(new Error('private-late-credential'));
+    for (let turn = 0; turn < 8; turn += 1) await Promise.resolve();
+    expect(await access.get('osspublic')).toEqual({
+      status: 'success',
+      credential: current,
+    });
+    expect(request).toHaveBeenCalledTimes(2);
+    access.dispose();
+  },
+);
+
+test('dispose 立即结束挂起的等待，迟到响应不能使旧 access 恢复', async () => {
+  const pending = deferred<OssCredentialResult>();
+  const request = jest.fn<
+    ReturnType<OssCredentialRequest>,
+    Parameters<OssCredentialRequest>
+  >(() => pending.promise);
+  const access = createOssCredentialAccess(request, [
+    'osspublic',
+    'ossprivate',
+  ]);
+  const received = jest.fn();
+  access.get('ossprivate').then(received);
+  access.dispose();
+  for (let turn = 0; turn < 8; turn += 1) await Promise.resolve();
+  expect(received).toHaveBeenCalledWith(
+    expect.objectContaining({
+      status: 'failed',
+      error: expect.objectContaining({ reason: 'access' }),
+    }),
+  );
+  expect(request.mock.calls[0][1]?.signal?.aborted).toBe(true);
+  pending.resolve({
+    status: 'success',
+    credential: credential() as OssCredential,
+  });
+  expect(await access.get('ossprivate')).toMatchObject({
+    status: 'failed',
+    error: { reason: 'access' },
+  });
+  expect(request).toHaveBeenCalledTimes(1);
+});
+
+test.each(['abort', 'dispose'] as const)(
+  'OSS 缓存交付前 %s 结束本次交付，单次取消保留有效缓存',
+  async (action) => {
+    const request = jest.fn(async (): Promise<OssCredentialResult> => ({
+      status: 'success',
+      credential: credential() as OssCredential,
+    }));
+    const access = createOssCredentialAccess(request, [
+      'osspublic',
+      'ossprivate',
+    ]);
+    await access.get('osspublic');
+    const controller = new AbortController();
+    const waiting = access.get('osspublic', { signal: controller.signal });
+    if (action === 'abort') controller.abort();
+    else access.dispose();
+    expect(await waiting).toMatchObject(
+      action === 'abort'
+        ? { status: 'cancelled' }
+        : { status: 'failed', error: { reason: 'access' } },
+    );
+    expect(await access.get('osspublic')).toMatchObject(
+      action === 'abort'
+        ? { status: 'success' }
+        : { status: 'failed', error: { reason: 'access' } },
+    );
+    expect(request).toHaveBeenCalledTimes(1);
+    access.dispose();
+  },
+);
+
+test('缓存交付前进入 30 秒窗口须重新取得可用凭证', async () => {
+  const request = jest.fn(async (): Promise<OssCredentialResult> => ({
+    status: 'success',
+    credential: credential() as OssCredential,
+  }));
+  const access = createOssCredentialAccess(request, [
+    'osspublic',
+    'ossprivate',
+  ]);
+  await access.get('osspublic');
+  jest.setSystemTime(now + 269_999);
+  const waiting = access.get('osspublic');
+  jest.setSystemTime(now + 270_000);
+  const renewed = credential({
+    expiration: new Date(now + 600_000).toISOString(),
+  }) as OssCredential;
+  request.mockResolvedValue({ status: 'success', credential: renewed });
+  expect(await waiting).toEqual({ status: 'success', credential: renewed });
+  expect(request).toHaveBeenCalledTimes(2);
+  access.dispose();
+});
+
 test('有效缓存按 ossKey 复用，到期才再请求；外部对象变化不能改写缓存', async () => {
   const input = credential();
   const request = jest.fn(async (): Promise<OssCredentialResult> => ({

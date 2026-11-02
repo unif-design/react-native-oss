@@ -95,6 +95,8 @@ export async function uploadOssFile(
       return uploadFailure('unsupported');
     }
     if (signal?.aborted) return { status: 'cancelled' };
+    options.onRequestStarted?.(Object.freeze({ ...target.object }));
+    if (signal?.aborted) return { status: 'cancelled' };
     readingMayHaveStarted = true;
     try {
       request = transport.fetch(

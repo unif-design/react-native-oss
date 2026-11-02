@@ -16,7 +16,7 @@ export async function uploadOssBatch(
   options: OssBatchOptions,
 ): Promise<OssBatchResult> {
   const snapshot = items.map((item) => ({ ...item }));
-  const { signal, onProgress, authorization } = options;
+  const { signal, onProgress, onRequestStarted, authorization } = options;
   const results: OssBatchItemResult[] = snapshot.map((item, index) => ({
     index,
     path: item.path,
@@ -46,6 +46,7 @@ export async function uploadOssBatch(
         credential: prepared.credential,
       },
       signal,
+      onRequestStarted,
       onProgress: (progress: Readonly<OssUploadProgress>) => {
         if (!active || signal?.aborted) return;
         try {

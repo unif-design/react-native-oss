@@ -24,6 +24,8 @@ access.dispose(); // 退出或身份变化时同步失效此授权实例
 
 `requestCredential` 接收 key 与可选 `{ signal }`，返回 `OssCredentialResult`。白名单在创建时复制，未知 key 返回 `access`，不调用请求。缓存仅属于当前实例，不持久化、不合并冷请求、不自动重试。释放后拒绝后续和迟到结果。
 
+单次取消或 `dispose()` 会立即结束本地等待，并通知上游取消；即使上游忽略信号，迟到响应也不会更新缓存。取消返回 `cancelled`，释放实例返回 `access`。缓存交付前再次检查取消、实例有效性和剩余有效期；单次取消不清空其他调用仍可用的缓存。
+
 凭证结果为 `success`（只读 credential）、`cancelled` 或 `failed`（`error.reason/message`，可选 `businessCode`）。失败 reason 为 `access`、`rejected`、`invalid_response`、`invalid_credential`、`unavailable`；宿主的换发适配负责转换后端响应。
 
 `createOssCredentialFailure(reason, businessCode?)` 供宿主换发适配构造相同的受控失败结果，复用固定错误文案。reason 使用 `OssCredentialErrorReason`；业务码须先由宿主响应校验确认。后端原始错误正文不作为该接口输入。
@@ -32,17 +34,20 @@ access.dispose(); // 退出或身份变化时同步失效此授权实例
 
 `uploadOssFile(input, options): Promise<OssUploadResult>`
 
-| 参数                       | 契约                                                                        |
-| -------------------------- | --------------------------------------------------------------------------- |
-| `input.fileUri`            | 调用方拥有的本地文件 `file:///` URI                                         |
-| `input.path`               | 相对对象路径，拒绝 `.` / `..` 段                                            |
-| `input.mimeType`           | 可选，按扩展名推断或使用 `application/octet-stream`                         |
-| `input.maxBytes`           | 可选非负安全整数，仅写入上传 policy 的长度条件                              |
-| `input.urlMode`            | 可选 `configured` / `origin`，默认采用有效 `baseUrl`                        |
-| `options.authorization`    | `{ kind: 'provided', credential }` 或 `{ kind: 'managed', access, ossKey }` |
-| `options.signal`           | 可选取消信号                                                                |
-| `options.onProgress`       | `{ sentBytes, totalBytes? }`，异常不改变回执                                |
-| `options.onSourceReleased` | 确认不再读取源文件后最多调用一次，允许异步收尾；上传结果不等待该回调完成    |
+| 参数                       | 契约                                                                                               |
+| -------------------------- | -------------------------------------------------------------------------------------------------- |
+| `input.fileUri`            | 调用方拥有的本地文件 `file:///` URI                                                                |
+| `input.path`               | 相对对象路径，拒绝 `.` / `..` 段                                                                   |
+| `input.mimeType`           | 可选，按扩展名推断或使用 `application/octet-stream`                                                |
+| `input.maxBytes`           | 可选非负安全整数，仅写入上传 policy 的长度条件                                                     |
+| `input.urlMode`            | 可选 `configured` / `origin`，默认采用有效 `baseUrl`                                               |
+| `options.authorization`    | `{ kind: 'provided', credential }` 或 `{ kind: 'managed', access, ossKey }`                        |
+| `options.signal`           | 可选取消信号                                                                                       |
+| `options.onProgress`       | `{ sentBytes, totalBytes? }`，异常不改变回执                                                       |
+| `options.onRequestStarted` | 原生发送前同步接收冻结的 `{ bucketName, objectKey, url? }`；回调抛错则不发送并归还尚未读取的源文件 |
+| `options.onSourceReleased` | 确认不再读取源文件后最多调用一次，允许异步收尾；上传结果不等待该回调完成                           |
+
+`onRequestStarted` 在输入、凭证、签名和 SDK 准备完成后调用，表示即将发送，不表示上传成功。回调可用于保存恢复所需的原对象身份；异常沿单文件调用上抛。提前取消或准备失败不会调用它；回调触发取消时也不会启动发送。
 
 只有 HTTP 200 / 204 返回 `success` 与 `{ bucketName, objectKey, url? }`。4xx / 5xx 为 `rejected`；其他回执、缺失回执或不可判定网络结果为 `unconfirmed`。取消不撤销已取得的明确成功或拒绝回执。错误 reason 还包括 `invalid_input`、`credential`、`signing`、`unsupported`。
 
@@ -50,13 +55,13 @@ access.dispose(); // 退出或身份变化时同步失效此授权实例
 
 `transferRemoteFileToOss(input, options): Promise<OssTransferResult>`
 
-input 使用 `sourceUrl` 替代 `fileUri`；其余字段与上传一致。options 使用上传授权、信号和进度，并要求 `getTransferDirectory(): string | undefined` 与 `createId(): string`。目录是宿主分配的私有 file URI；不可用时返回 `undefined`，返回 `unsupported`。`createId` 必须返回目录内唯一且适合作为文件名的标识，不含目录分隔符或父路径。
+input 使用 `sourceUrl` 替代 `fileUri`；其余字段与上传一致。options 使用上传授权、信号、进度及 `onRequestStarted`，并要求 `getTransferDirectory(): string | undefined` 与 `createId(): string`。目录是宿主分配的私有 file URI；不可用时返回 `undefined`，返回 `unsupported`。`createId` 必须返回目录内唯一且适合作为文件名的标识，不含目录分隔符或父路径。
 
 目录函数在输入和取消校验之后、凭证准备之前按需调用；本地上传、无效输入及提前取消不读取转存目录。授权和目标验证先于下载。仅 HTTP 200 且文件落地后上传，保留签名 URL 原字节。下载失败标识 `stage: 'download'`，上传失败为 `stage: 'upload'`。交给上传后的临时文件等待 `onSourceReleased` 才释放。`maxBytes` 不改变下载默认策略。
 
 转存输入和批量各项的 `urlMode` 与单文件上传一致：省略或设为 `configured` 时沿用配置地址，设为 `origin` 时返回 OSS 原始地址。该选项只影响成功回执中的 `url`，不改变上传目标或对象路径；非法值按 `invalid_input` 处理。
 
-文件交给上传后，清理由释放回调触发，转存 Promise 不等待该异步删除完成；清理失败记录日志并保留上传回执。
+发送前回调抛错时，转存返回上传阶段失败并释放本次下载文件；不会发起原生上传。文件交给上传后，清理由释放回调触发，转存 Promise 不等待该异步删除完成；清理失败记录日志并保留上传回执。
 
 ## 顺序批量
 
@@ -65,3 +70,5 @@ input 使用 `sourceUrl` 替代 `fileUri`；其余字段与上传一致。option
 item 为 `{ kind: 'local', ...UploadOssFileInput }` 或 `{ kind: 'remote', ...TransferRemoteFileToOssInput }`。options 包含授权、信号、`getTransferDirectory`、`createId`，进度为 `{ index, progress }`。
 
 结果 `items` 与输入同序，逐项保留 `index`、`path`、`result`。单项失败继续，取消只停止未开始项；共同准备失败时返回 `preparationError`，各项为 `{ status: 'not_started', reason: 'preparation_failed' }`。取消后未开始项 reason 为 `cancelled`。不去重、不改名、不回滚已成功项。
+
+`onRequestStarted` 按实际发送顺序接收每项对象。回调抛错沿所属操作的规则处理：远程项返回失败，批量继续处理后续项；本地项沿单文件接口上抛，批量停止，尚未开始项不会发送。
