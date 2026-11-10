@@ -32,19 +32,22 @@ export async function uploadOssFile(
   let readingMayHaveStarted = false;
   let request: OssUploadRequest | undefined;
   let settled = false;
+  const reportCancelFailure = (error: unknown) => {
+    log.warn('oss.upload.cancel_failed', {
+      context,
+      phase: 'cleanup',
+      outcome: 'failed',
+      code: 'oss.upload.cancel_failed',
+      fields: { operation: 'cancel', ...getFailureDiagnostics(error) },
+    });
+    /* Stopping is best effort; native completion remains independent. */
+  };
   const cancel = () => {
     if (!settled) {
       try {
-        request?.cancel();
+        request?.cancel().catch(reportCancelFailure);
       } catch (error) {
-        log.warn('oss.upload.cancel_failed', {
-          context,
-          phase: 'cleanup',
-          outcome: 'failed',
-          code: 'oss.upload.cancel_failed',
-          fields: { operation: 'cancel', ...getFailureDiagnostics(error) },
-        });
-        /* Stopping is best effort; native completion remains independent. */
+        reportCancelFailure(error);
       }
     }
   };

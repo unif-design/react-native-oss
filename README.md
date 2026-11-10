@@ -8,13 +8,13 @@ React Native OSS 工具库，提供临时凭证校验与缓存、单文件上传
 
 iOS／Android 使用原生传输能力。Web 可校验和缓存凭证，上传与转存返回 `unsupported`；原生示例不支持 Expo Go。
 
-| 依赖                   | 支持要求                | 本仓开发组合 |
-| ---------------------- | ----------------------- | ------------ |
-| React                  | `^19.3.0`               | 19.3.1       |
-| React Native           | `>=0.88.0`              | 0.88.1       |
-| Files                  | `^0.1.0`                | 0.1.0        |
-| Logger                 | `^0.1.3`                | 0.1.3        |
-| react-native-blob-util | 精确 0.25.1，需宿主补丁 | 0.25.1       |
+| 依赖                   | 支持要求               | 本次验证组合 |
+| ---------------------- | ---------------------- | ------------ |
+| React                  | `^19.3.0`              | 19.3.1       |
+| React Native           | `>=0.88.0`             | 0.88.1       |
+| Files                  | `^0.2.1`               | 0.2.1        |
+| Logger                 | `^0.2.2`               | 0.2.2        |
+| react-native-blob-util | 精确 1.1.1，需宿主补丁 | 1.1.1        |
 
 BlobUtil 必须具备 `onRequestComplete` 原生结束通知。补丁由 Portal 宿主维护，本包不附带或自动应用；Files 所需的原生依赖与补丁也需按[接入文档](docs/native-setup.md)准备。开发组合不代表全部版本组合已通过设备或真实 OSS 验证。
 
@@ -23,8 +23,8 @@ BlobUtil 必须具备 `onRequestComplete` 原生结束通知。补丁由 Portal 
 1. 安装本库及 peer 依赖：
 
    ```sh
-   npm install @unif/react-native-oss @unif/react-native-files@^0.1.0 \
-     @unif/react-native-logger@^0.1.3 react-native-blob-util@0.25.1
+   npm install @unif/react-native-oss @unif/react-native-files@0.2.1 \
+     @unif/react-native-logger@0.2.2 react-native-blob-util@1.1.1
    ```
 
 2. 按[原生接线](docs/native-setup.md)配置补丁后的 SDK，核对应用实际解析的副本，同步 iOS Pods 并重新构建。

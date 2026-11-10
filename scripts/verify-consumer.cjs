@@ -39,7 +39,7 @@ try {
       pkg.devDependencies['@unif/react-native-logger'],
     'react': pkg.devDependencies.react,
     'react-native': pkg.devDependencies['react-native'],
-    'react-native-blob-util': '0.25.1',
+    'react-native-blob-util': pkg.devDependencies['react-native-blob-util'],
     '@dr.pogodin/react-native-fs': '2.41.0',
     '@dr.pogodin/react-native-static-server': '0.28.1',
     'typescript': '6.0.3',
