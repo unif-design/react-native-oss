@@ -74,9 +74,9 @@ function nativeUpload() {
       complete = callback;
       return request;
     }),
-    cancel: jest.fn((): typeof pending.promise => {
+    cancel: jest.fn((): Promise<void> => {
       pending.reject(new Error('native cancel'));
-      return request;
+      return Promise.resolve();
     }),
   });
   fetch.mockReturnValueOnce(request);

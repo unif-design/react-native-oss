@@ -5,17 +5,17 @@ description: SDK 精确版本、宿主补丁准备、终态通知与消费者验
 
 # 原生接线
 
-库本体是 TypeScript，不新增自有 TurboModule / Fabric / Swift / Kotlin 实现。传输使用 `react-native-blob-util@0.25.1`；文件能力使用 `@unif/react-native-files`，日志使用同一个 `@unif/react-native-logger`。
+库本体是 TypeScript，不新增自有 TurboModule / Fabric / Swift / Kotlin 实现。传输使用 `react-native-blob-util@1.1.1`；文件能力使用 `@unif/react-native-files`，日志使用同一个 `@unif/react-native-logger`。
 
 ## 宿主维护补丁
 
 补丁统一由 Portal 的宿主工程维护和应用。公共库不携带 .patch、不自动修改消费者依赖。其他宿主接入时，须先从获准访问的维护源取得同一版本补丁，并按宿主的安装流程显式应用，再重新执行 Pods / Gradle 构建；不得假设 npm 安装已经补齐能力。
 
-| 依赖精确版本 | 必需能力 |
-| --- | --- |
-| react-native-blob-util 0.25.1 | onRequestComplete 独立原生终态、一次性通知、取消不提前释放、异常关闭源流 |
-| @dr.pogodin/react-native-fs 2.41.0 | Files 下载取消与终态清理契约 |
-| @dr.pogodin/react-native-static-server 0.28.1 | Files 资源访问的原生生命周期契约 |
+| 依赖精确版本                                  | 必需能力                                                                 |
+| --------------------------------------------- | ------------------------------------------------------------------------ |
+| react-native-blob-util 1.1.1                  | onRequestComplete 独立原生终态、一次性通知、取消不提前释放、异常关闭源流 |
+| @dr.pogodin/react-native-fs 2.41.0            | Files 下载取消与终态清理契约                                             |
+| @dr.pogodin/react-native-static-server 0.28.1 | Files 资源访问的原生生命周期契约                                         |
 
 同一宿主只维护一份补丁源。确认库、example、Metro、autolinking、Pods 和 Gradle 实际解析的是已修补副本，不能只修补库根目录另一份 node_modules。补丁失败或版本不匹配时停止原生验收，不回退到未修补语义。
 

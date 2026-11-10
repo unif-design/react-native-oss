@@ -28,9 +28,9 @@ function task() {
   let complete: (() => void) | undefined;
   let progress: ((sent: number, total: number) => void) | undefined;
   const request = Object.assign(pending.promise, {
-    cancel: jest.fn((): typeof pending.promise => {
+    cancel: jest.fn((): Promise<void> => {
       pending.reject(new Error('cancel contains /private/secret'));
-      return request;
+      return Promise.resolve();
     }),
     uploadProgress: jest.fn(
       (
@@ -285,6 +285,42 @@ test('cancel settlement does not release until independent native completion, at
   native.complete();
   native.complete();
   expect(release).toHaveBeenCalledTimes(1);
+});
+test('async cancellation failure is diagnosed without releasing the source or changing the receipt', async () => {
+  const native = task();
+  const failure = deferred<void>();
+  native.request.cancel.mockImplementationOnce(() => failure.promise);
+  const controller = new AbortController();
+  const release = jest.fn();
+  const result = oss.uploadOssFile(input, {
+    authorization: provided(),
+    signal: controller.signal,
+    onSourceReleased: release,
+  });
+  await started();
+  controller.abort();
+  failure.reject(new Error('private-async-cancel'));
+  await started();
+  expect(mockWarn).toHaveBeenCalledWith(
+    'oss.upload.cancel_failed',
+    expect.objectContaining({
+      phase: 'cleanup',
+      fields: expect.objectContaining({
+        operation: 'cancel',
+        errorType: 'Error',
+      }),
+    }),
+  );
+  expect(release).not.toHaveBeenCalled();
+  native.respond(200);
+  expect((await result).status).toBe('success');
+  expect(release).not.toHaveBeenCalled();
+  native.complete();
+  native.complete();
+  expect(release).toHaveBeenCalledTimes(1);
+  expect(JSON.stringify(mockWarn.mock.calls)).not.toContain(
+    'private-async-cancel',
+  );
 });
 test('missing native completion support conservatively retains source even on success', async () => {
   const native = task();
@@ -770,7 +806,7 @@ test('cancellation before abort subscription stops native transfer once and wait
 test('an unconfirmed native response after cancellation stays cancelled and is not logged as failure', async () => {
   const controller = new AbortController();
   const native = task();
-  native.request.cancel.mockImplementationOnce(() => native.request);
+  native.request.cancel.mockImplementationOnce(() => Promise.resolve());
   const release = jest.fn();
   const waiting = oss.uploadOssFile(input, {
     authorization: provided(),

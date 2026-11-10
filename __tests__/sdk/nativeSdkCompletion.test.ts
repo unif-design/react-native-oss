@@ -6,6 +6,7 @@ import { transformSync } from '@babel/core';
 
 // Exercise installed fetch/lazy-lookup logic with native, ID and response fixtures.
 function loadFetch(nativeAvailable = true) {
+  let nativeReady = nativeAvailable;
   const callbacks = new Map<string, (...values: unknown[]) => void>();
   const subscriptions = new Set<object>();
   let nextId = 0;
@@ -15,7 +16,7 @@ function loadFetch(nativeAvailable = true) {
         callbacks.set(id, callback);
       },
     ),
-    cancelRequest: jest.fn((_id, callback) => callback()),
+    cancelRequest: jest.fn((_id: string) => Promise.resolve()),
   };
   const imports: Record<string, unknown> = {
     './types': {},
@@ -32,7 +33,7 @@ function loadFetch(nativeAvailable = true) {
     },
     './class/ReactNativeBlobUtilCanceledFetchError': class extends Error {},
     'react-native': {
-      TurboModuleRegistry: { get: () => (nativeAvailable ? native : null) },
+      TurboModuleRegistry: { get: () => (nativeReady ? native : null) },
       NativeEventEmitter: class {
         addListener(event: string) {
           const subscription: { remove(): boolean } = {
@@ -47,10 +48,12 @@ function loadFetch(nativeAvailable = true) {
       },
     },
   };
-  const modules = new Map<string, { exports: any }>();
-  function loadSdkModule(source: string): any {
+  const modules = new Map<string, { exports: unknown }>();
+  function loadSdkModule(source: string): unknown {
     const cached = modules.get(source);
-    if (cached) return cached.exports;
+    if (cached) {
+      return cached.exports;
+    }
     const resolveFromSource = createRequire(source);
     const code = transformSync(readFileSync(source, 'utf8'), {
       filename: source,
@@ -59,7 +62,7 @@ function loadFetch(nativeAvailable = true) {
       compact: false,
       presets: [require.resolve('@react-native/babel-preset')],
     })!.code!;
-    const module = { exports: {} as any };
+    const module: { exports: unknown } = { exports: {} };
     modules.set(source, module);
     runInNewContext(code, {
       module,
@@ -83,12 +86,21 @@ function loadFetch(nativeAvailable = true) {
       ? join(process.env.OSS_SDK_ROOT, 'fetch.js')
       : require.resolve('react-native-blob-util/fetch'),
   );
-  function request() {
-    return sdk
-      .config({ followRedirect: false })
-      .fetch('POST', 'https://fixture.invalid', {}, [
-        { name: 'file', filename: 'fixture.txt', data: 'synthetic' },
-      ]);
+  function request(headers: Record<string, unknown> = {}) {
+    if (!isRecord(sdk) || typeof sdk.config !== 'function') {
+      throw new Error('实际SDK没有导出config');
+    }
+    const configured: unknown = sdk.config({ followRedirect: false });
+    if (!isFetchConfiguration(configured)) {
+      throw new Error('实际SDK config未提供fetch');
+    }
+    const task = configured.fetch('POST', 'https://fixture.invalid', headers, [
+      { name: 'file', filename: 'fixture.txt', data: 'synthetic' },
+    ]);
+    if (!isNativeTask(task)) {
+      throw new Error('实际SDK未交付原生请求生命周期');
+    }
+    return task;
   }
   return {
     request,
@@ -96,7 +108,7 @@ function loadFetch(nativeAvailable = true) {
     native,
     subscriptions,
     setNativeAvailable(available: boolean) {
-      nativeAvailable = available;
+      nativeReady = available;
     },
   };
 }
@@ -153,9 +165,48 @@ describe('blob-util native request completion handoff', () => {
     expect(task.onRequestComplete).toEqual(expect.any(Function));
     expect(task.onRequestComplete(released)).toBe(task);
     const outcome = task.catch((error: Error) => error.message);
-    task.cancel();
+    await task.cancel();
     expect(await outcome).toBe('canceled');
     expect(native.cancelRequest).toHaveBeenCalledTimes(1);
+    expect(released).not.toHaveBeenCalled();
+    callbacks.get(task.taskId)!('task cancelled');
+    await Promise.resolve();
+    expect(released).toHaveBeenCalledTimes(1);
+  });
+
+  it('releases a request rejected by header validation without native dispatch', async () => {
+    const { request, native, subscriptions } = loadFetch();
+    const task = request({ invalid: 42 });
+    const released = jest.fn();
+    task.onRequestComplete(released);
+    await expect(task).rejects.toMatchObject({ code: 'EINVAL' });
+    expect(released).toHaveBeenCalledTimes(1);
+    expect(native.fetchBlobForm).not.toHaveBeenCalled();
+    expect(subscriptions.size).toBe(0);
+  });
+
+  it('releases listeners and source if native dispatch throws synchronously', async () => {
+    const { request, native, subscriptions } = loadFetch();
+    native.fetchBlobForm.mockImplementation(() => {
+      throw new Error('bridge dispatch failed');
+    });
+    const task = request();
+    const released = jest.fn();
+    task.onRequestComplete(released);
+    await expect(task).rejects.toThrow('bridge dispatch failed');
+    expect(released).toHaveBeenCalledTimes(1);
+    expect(subscriptions.size).toBe(0);
+  });
+
+  it('keeps the source until native completion when cancellation rejects', async () => {
+    const { request, callbacks, native } = loadFetch();
+    native.cancelRequest.mockRejectedValue(new Error('cancel failed'));
+    const task = request();
+    const outcome = task.catch((error: Error) => error.message);
+    const released = jest.fn();
+    task.onRequestComplete(released);
+    await expect(task.cancel()).rejects.toThrow('cancel failed');
+    expect(await outcome).toBe('canceled');
     expect(released).not.toHaveBeenCalled();
     callbacks.get(task.taskId)!('task cancelled');
     await Promise.resolve();
@@ -170,7 +221,7 @@ describe('blob-util native request completion handoff', () => {
     task.onRequestComplete(released);
     callbacks.get(task.taskId)!(null, 'utf8', '', { status: 204 });
     const result = await task;
-    expect(result.response.status).toBe(204);
+    expect(result).toMatchObject({ response: { status: 204 } });
     task.cancel();
     callbacks.get(task.taskId)!(null, 'utf8', '', { status: 204 });
     await Promise.resolve();
@@ -213,7 +264,36 @@ describe('blob-util native request completion handoff', () => {
     expect(task.onRequestComplete).toEqual(expect.any(Function));
     task.onRequestComplete(() => Promise.reject(new Error('observer')));
     callbacks.get(task.taskId)!(null, 'utf8', '', { status: 200 });
-    expect((await task).response.status).toBe(200);
+    expect(await task).toMatchObject({ response: { status: 200 } });
     await Promise.resolve();
   });
 });
+
+function isFetchConfiguration(
+  value: unknown,
+): value is { fetch(...args: unknown[]): unknown } {
+  return isRecord(value) && typeof value.fetch === 'function';
+}
+
+interface NativeTask extends Promise<unknown> {
+  taskId: string;
+  onRequestComplete(listener: () => unknown): NativeTask;
+  uploadProgress(listener: (...args: unknown[]) => void): NativeTask;
+  progress(listener: (...args: unknown[]) => void): NativeTask;
+  cancel(): Promise<void>;
+}
+function isNativeTask(value: unknown): value is NativeTask {
+  return (
+    value instanceof Promise &&
+    isRecord(value) &&
+    typeof value.taskId === 'string' &&
+    typeof value.onRequestComplete === 'function' &&
+    typeof value.uploadProgress === 'function' &&
+    typeof value.progress === 'function' &&
+    typeof value.cancel === 'function'
+  );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
