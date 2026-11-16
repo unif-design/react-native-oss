@@ -71,13 +71,16 @@ export function createOssCredentialAccess(
       } catch (error) {
         if (lifetime.signal.aborted) return credentialFailure('access');
         if (!signal?.aborted)
-          createLogger('oss.credentials').warn('credential.request_failed', {
-            context,
-            phase: 'credential',
-            outcome: 'failed',
-            code: 'oss.credentials.unavailable',
-            fields: { operation: 'request', ...getFailureDiagnostics(error) },
-          });
+          createLogger('oss.credentials').warn(
+            'credential.request_failed',
+            () => ({
+              context,
+              phase: 'credential',
+              outcome: 'failed',
+              code: 'oss.credentials.unavailable',
+              fields: { operation: 'request', ...getFailureDiagnostics(error) },
+            }),
+          );
         return signal?.aborted
           ? { status: 'cancelled' }
           : credentialFailure('unavailable');

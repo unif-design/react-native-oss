@@ -1,3 +1,5 @@
+import { loggerRuntimeFixture } from './loggerRuntimeFixture';
+import { readLogCalls } from './logMetadataFixture';
 import * as logging from '@unif/react-native-logger';
 import { createOssCredentialAccess } from '@unif/react-native-oss';
 import type {
@@ -8,6 +10,7 @@ import type {
 import { credential, deferred, now } from './credentialFixture';
 
 jest.mock('@unif/react-native-logger', () => ({
+  __esModule: true,
   ...jest.requireActual('@unif/react-native-logger'),
   createLogger: jest.fn(
     jest.requireActual('@unif/react-native-logger').createLogger,
@@ -289,7 +292,7 @@ test('凭据访问转换原异常时记录安全诊断，失效后的迟到异�
     error: { reason: 'unavailable' },
   });
   expect(warn).toHaveBeenCalledTimes(1);
-  expect(warn).toHaveBeenCalledWith(
+  expect(readLogCalls(warn.mock.calls)).toContainEqual([
     'credential.request_failed',
     expect.objectContaining({
       phase: 'credential',
@@ -299,8 +302,10 @@ test('凭据访问转换原异常时记录安全诊断，失效后的迟到异�
         reason: 'timeout',
       }),
     }),
+  ]);
+  expect(JSON.stringify(readLogCalls(warn.mock.calls))).not.toContain(
+    'private-credential',
   );
-  expect(JSON.stringify(warn.mock.calls)).not.toContain('private-credential');
   warn.mockClear();
   const pending = deferred<OssCredentialResult>();
   request.mockReturnValueOnce(pending.promise);
@@ -337,15 +342,15 @@ test('上游成功但 OSS 凭据校验失败由访问层记录，凭据内容不
   });
   expect(request).toHaveBeenCalledTimes(1);
   expect(warn).toHaveBeenCalledTimes(1);
-  expect(warn).toHaveBeenCalledWith(
+  expect(readLogCalls(warn.mock.calls)).toContainEqual([
     'credential.invalid',
     expect.objectContaining({
       phase: 'validate',
       code: 'oss.credentials.invalid_credential',
       fields: { operation: 'read_credential', reason: 'invalid_credential' },
     }),
-  );
-  expect(JSON.stringify(warn.mock.calls)).not.toMatch(
+  ]);
+  expect(JSON.stringify(readLogCalls(warn.mock.calls))).not.toMatch(
     /fixture-access-secret|fixture-security-token|fixture-bucket/,
   );
 });
@@ -400,4 +405,48 @@ test('宿主 key 白名单限制请求与缓存，创建后外部变更不能扩
     status: 'success',
   });
   expect(request).toHaveBeenCalledTimes(1);
+});
+
+test('正式Logger异步执行凭据失败投影，业务结果先交付且请求不重试', async () => {
+  jest.useRealTimers();
+  jest.spyOn(console, 'warn').mockImplementation(() => {});
+  const actual = jest.requireActual<typeof import('@unif/react-native-logger')>(
+    '@unif/react-native-logger',
+  );
+  jest.spyOn(logging, 'createLogger').mockImplementation(actual.createLogger);
+  const projection = jest.spyOn(logging, 'getFailureDiagnostics');
+  const { handle, writes } = await loggerRuntimeFixture();
+  const request = jest
+    .fn()
+    .mockRejectedValueOnce(
+      Object.assign(new Error('private-credential'), { code: 'ECONNRESET' }),
+    );
+  const access = createOssCredentialAccess(request, [
+    'osspublic',
+    'ossprivate',
+  ]);
+  try {
+    await expect(access.get('osspublic')).resolves.toMatchObject({
+      status: 'failed',
+      error: { reason: 'unavailable' },
+    });
+    expect(projection).not.toHaveBeenCalled();
+    expect(writes).toHaveLength(0);
+    expect(request).toHaveBeenCalledTimes(1);
+    await handle.flush();
+    expect(projection).toHaveBeenCalledTimes(1);
+    expect(writes).toHaveLength(1);
+    expect(JSON.parse(writes[0].line)).toMatchObject({
+      phase: 'credential',
+      fields: {
+        operation: 'request',
+        sourceCode: 'ECONNRESET',
+        reason: 'connection_reset',
+      },
+    });
+    expect(writes[0].line).not.toContain('private-credential');
+  } finally {
+    access.dispose();
+    handle.dispose();
+  }
 });

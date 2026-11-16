@@ -37,13 +37,16 @@ export async function prepareUploadAuthorization(
       : uploadFailure('credential');
   } catch (error) {
     if (!signal?.aborted)
-      createLogger('oss.upload').warn('oss.upload.authorization_failed', {
-        context,
-        phase: 'credential',
-        outcome: 'failed',
-        code: 'oss.upload.credential',
-        fields: { operation: 'authorize', ...getFailureDiagnostics(error) },
-      });
+      createLogger('oss.upload').warn(
+        'oss.upload.authorization_failed',
+        () => ({
+          context,
+          phase: 'credential',
+          outcome: 'failed',
+          code: 'oss.upload.credential',
+          fields: { operation: 'authorize', ...getFailureDiagnostics(error) },
+        }),
+      );
     return signal?.aborted
       ? { status: 'cancelled' }
       : uploadFailure('credential');

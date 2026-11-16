@@ -6485,14 +6485,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@unif/react-native-design@npm:1.13.6":
-  version: 1.13.6
-  resolution: "@unif/react-native-design@npm:1.13.6"
+"@unif/react-native-design@npm:1.20.0":
+  version: 1.20.0
+  resolution: "@unif/react-native-design@npm:1.20.0"
   dependencies:
     react-is: "npm:^19.2.8"
   peerDependencies:
     "@callstack/liquid-glass": ">=0.8.2 <0.9.0"
     "@unif/react-native-icons": ">=0.1.0"
+    "@unif/react-native-logger": ^0.2.0 || ^0.3.0
     react: ">=19.2.3 <20.0.0"
     react-native: ">=0.86.0"
     react-native-gesture-handler: ">=3.0.0 <4.0.0"
@@ -6501,29 +6502,29 @@ __metadata:
     react-native-safe-area-context: ">=5"
     react-native-svg: ">=15"
     react-native-worklets: ">=0.11.0 <0.14.0"
-  checksum: 10c0/6279fb030b2bb0da669af03aaa567159d74a90e1b10313985aa044566bd57baf44378409660641055b3a9ac1f72784a993f32f35aab4b866150275d68457b142
+  checksum: 10c0/7c185d990358f74112ba40c6430a46a54139ed5bb6170e74ae9d7dff1c8a796839dd111e6c9bcea55929f5e73c84df7112e8248ada8d640a3fdf325b4d611115
   languageName: node
   linkType: hard
 
-"@unif/react-native-files@npm:0.2.1":
-  version: 0.2.1
-  resolution: "@unif/react-native-files@npm:0.2.1"
+"@unif/react-native-files@npm:0.2.2":
+  version: 0.2.2
+  resolution: "@unif/react-native-files@npm:0.2.2"
   dependencies:
     react-native-url-polyfill: "npm:4.0.0"
   peerDependencies:
     "@dr.pogodin/react-native-fs": 2.41.0
     "@dr.pogodin/react-native-static-server": 0.28.1
-    "@unif/react-native-logger": ^0.2.2
+    "@unif/react-native-logger": ^0.2.2 || ^0.3.0
     react: ">=19.3.0"
     react-native: ">=0.88.0"
     react-native-blob-util: 1.1.1
-  checksum: 10c0/b27d8aaa13391919a2c66fa5888c9855b0acf055e028dcb85dede602a3061189176160b9257d0d653103c74d2617840e799899dba6f0d418e0c5e5c2ced8b5e6
+  checksum: 10c0/d61ec89aaf3e5b11ed8241f441664dbf0c3ce9767013ccef4d2b5d67ad92375eb454ae18f2718b6e0e9e15b73379932bc68714d2c130431f29468b38f600012f
   languageName: node
   linkType: hard
 
-"@unif/react-native-logger@npm:0.2.2":
-  version: 0.2.2
-  resolution: "@unif/react-native-logger@npm:0.2.2"
+"@unif/react-native-logger@npm:^0.3.0":
+  version: 0.3.0
+  resolution: "@unif/react-native-logger@npm:0.3.0"
   dependencies:
     crypto-js: "npm:^4.2.0"
     lodash: "npm:^4.18.1"
@@ -6535,7 +6536,7 @@ __metadata:
       optional: true
     react-native-blob-util:
       optional: true
-  checksum: 10c0/abcc21fff2c1766c2cae0740f374ecc2e8d236d17bf90e199f30d199777d2dcb887449041f25c70ad4d482b0195469b0a320c6aaf78a318b37ab7f12a470a891
+  checksum: 10c0/286ecd97099382796a11cbac8d1f4dc437003350d41dbd49e7f79d7391ff160e9c5af2a272a827bc306abcd79cdaf7397b6d681e670868772a787bf4522097cb
   languageName: node
   linkType: hard
 
@@ -6556,8 +6557,8 @@ __metadata:
     "@react-native/metro-config": "npm:0.88.1"
     "@react-native/typescript-config": "npm:0.88.1"
     "@types/react": "npm:~19.3.0"
-    "@unif/react-native-files": "npm:0.2.1"
-    "@unif/react-native-logger": "npm:0.2.2"
+    "@unif/react-native-files": "npm:0.2.2"
+    "@unif/react-native-logger": "npm:^0.3.0"
     react: "npm:19.3.1"
     react-native: "npm:0.88.1"
     react-native-blob-util: "npm:1.1.1"
@@ -6580,7 +6581,7 @@ __metadata:
     "@docusaurus/types": "npm:3.10.1"
     "@mdx-js/react": "npm:^3.0.0"
     "@types/react": "npm:~19.3.0"
-    "@unif/react-native-design": "npm:1.13.6"
+    "@unif/react-native-design": "npm:1.20.0"
     prism-react-renderer: "npm:^2.3.0"
     react: "npm:19.3.1"
     react-dom: "npm:19.3.1"
@@ -6607,8 +6608,8 @@ __metadata:
     "@types/jest": "npm:30.0.0"
     "@types/node": "npm:^22.0.0"
     "@types/react": "npm:~19.3.0"
-    "@unif/react-native-files": "npm:0.2.1"
-    "@unif/react-native-logger": "npm:0.2.2"
+    "@unif/react-native-files": "npm:0.2.2"
+    "@unif/react-native-logger": "npm:^0.3.0"
     commitlint: "npm:21.2.1"
     crypto-js: "npm:4.2.0"
     del-cli: "npm:^8.0.1"
@@ -6633,7 +6634,7 @@ __metadata:
     typescript: "npm:^6.0.3"
   peerDependencies:
     "@unif/react-native-files": ^0.2.1
-    "@unif/react-native-logger": ^0.2.2
+    "@unif/react-native-logger": ^0.3.0
     react: ^19.3.0
     react-native: ">=0.88.0"
     react-native-blob-util: 1.1.1

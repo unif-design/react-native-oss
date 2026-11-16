@@ -12,8 +12,8 @@
   "dependencies": {
     "@dr.pogodin/react-native-fs": "2.41.0",
     "@dr.pogodin/react-native-static-server": "0.28.1",
-    "@unif/react-native-files": "0.2.1",
-    "@unif/react-native-logger": "0.2.2",
+    "@unif/react-native-files": "0.2.2",
+    "@unif/react-native-logger": "^0.3.0",
     "react": "19.3.1",
     "react-native": "0.88.1",
     "react-native-blob-util": "1.1.1",
