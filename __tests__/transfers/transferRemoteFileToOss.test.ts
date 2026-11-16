@@ -1,3 +1,4 @@
+import { readLogCalls } from '../logMetadataFixture';
 import { makeTransferOptions } from '../transferFixture';
 const withTransferOptions = makeTransferOptions(() => `unique-${++mockId}`);
 import { Platform } from 'react-native';
@@ -377,15 +378,15 @@ test.each(['result', 'throw'])(
     expect(
       await oss.transferRemoteFileToOss(input, withTransferOptions(provided())),
     ).toEqual(success);
-    expect(mockWarn).toHaveBeenCalledWith(
+    expect(readLogCalls(mockWarn.mock.calls)).toContainEqual([
       expect.any(String),
       expect.objectContaining({
         phase: 'cleanup',
         outcome: 'failed',
         code: expect.any(String),
       }),
-    );
-    expect(JSON.stringify(mockWarn.mock.calls)).not.toMatch(
+    ]);
+    expect(JSON.stringify(readLogCalls(mockWarn.mock.calls))).not.toMatch(
       /signature|fixture-access-secret|file:\/\/\//,
     );
   },

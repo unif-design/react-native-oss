@@ -33,13 +33,13 @@ export async function uploadOssFile(
   let request: OssUploadRequest | undefined;
   let settled = false;
   const reportCancelFailure = (error: unknown) => {
-    log.warn('oss.upload.cancel_failed', {
+    log.warn('oss.upload.cancel_failed', () => ({
       context,
       phase: 'cleanup',
       outcome: 'failed',
       code: 'oss.upload.cancel_failed',
       fields: { operation: 'cancel', ...getFailureDiagnostics(error) },
-    });
+    }));
     /* Stopping is best effort; native completion remains independent. */
   };
   const cancel = () => {
@@ -69,13 +69,13 @@ export async function uploadOssFile(
     try {
       form = createUploadForm(credential, target.object.objectKey, prepared);
     } catch (error) {
-      log.warn('oss.upload.failed', {
+      log.warn('oss.upload.failed', () => ({
         context,
         phase: 'signing',
         outcome: 'failed',
         code: 'oss.upload.signing',
         fields: { operation: 'upload', ...getFailureDiagnostics(error) },
-      });
+      }));
       return uploadFailure('signing');
     }
     let transport;
@@ -88,13 +88,13 @@ export async function uploadOssFile(
       });
       transport = BlobUtil.config({ followRedirect: false });
     } catch (error) {
-      log.warn('oss.upload.failed', {
+      log.warn('oss.upload.failed', () => ({
         context,
         phase: 'native_prepare',
         outcome: 'failed',
         code: 'oss.upload.unsupported',
         fields: { operation: 'upload', ...getFailureDiagnostics(error) },
-      });
+      }));
       return uploadFailure('unsupported');
     }
     if (signal?.aborted) return { status: 'cancelled' };
@@ -123,7 +123,7 @@ export async function uploadOssFile(
                 : {}),
             });
           } catch (error) {
-            log.warn('oss.upload.observer_failed', {
+            log.warn('oss.upload.observer_failed', () => ({
               context,
               phase: 'callback',
               outcome: 'failed',
@@ -132,7 +132,7 @@ export async function uploadOssFile(
                 operation: 'progress',
                 ...getFailureDiagnostics(error),
               },
-            });
+            }));
             /* Observer errors cannot rewrite the storage result. */
           }
         },
@@ -174,13 +174,13 @@ export async function uploadOssFile(
       );
     } catch (error) {
       if (!signal?.aborted)
-        log.warn('oss.upload.failed', {
+        log.warn('oss.upload.failed', () => ({
           context,
           phase: 'transfer',
           outcome: 'unknown',
           code: 'oss.upload.unconfirmed',
           fields: { operation: 'upload', ...getFailureDiagnostics(error) },
-        });
+        }));
       return signal?.aborted
         ? { status: 'cancelled' }
         : uploadFailure('unconfirmed');

@@ -1,3 +1,4 @@
+import { readLogCalls } from '../logMetadataFixture';
 import Utf8 from 'crypto-js/enc-utf8';
 import BlobUtil from 'react-native-blob-util';
 import * as oss from '@unif/react-native-oss';
@@ -156,9 +157,9 @@ test('transport exception stays unconfirmed and does not expose cause', async ()
     status: 'failed',
     error: { reason: 'unconfirmed' },
   });
-  expect(JSON.stringify([response, mockWarn.mock.calls])).not.toMatch(
-    /fixture-access-secret|\/private\/photo/,
-  );
+  expect(
+    JSON.stringify([response, readLogCalls(mockWarn.mock.calls)]),
+  ).not.toMatch(/fixture-access-secret|\/private\/photo/);
 });
 
 test.each([
@@ -301,7 +302,7 @@ test('async cancellation failure is diagnosed without releasing the source or ch
   controller.abort();
   failure.reject(new Error('private-async-cancel'));
   await started();
-  expect(mockWarn).toHaveBeenCalledWith(
+  expect(readLogCalls(mockWarn.mock.calls)).toContainEqual([
     'oss.upload.cancel_failed',
     expect.objectContaining({
       phase: 'cleanup',
@@ -310,7 +311,7 @@ test('async cancellation failure is diagnosed without releasing the source or ch
         errorType: 'Error',
       }),
     }),
-  );
+  ]);
   expect(release).not.toHaveBeenCalled();
   native.respond(200);
   expect((await result).status).toBe('success');
@@ -318,7 +319,7 @@ test('async cancellation failure is diagnosed without releasing the source or ch
   native.complete();
   native.complete();
   expect(release).toHaveBeenCalledTimes(1);
-  expect(JSON.stringify(mockWarn.mock.calls)).not.toContain(
+  expect(JSON.stringify(readLogCalls(mockWarn.mock.calls))).not.toContain(
     'private-async-cancel',
   );
 });
@@ -354,7 +355,7 @@ test.each([false, true])(
     expect((await result).status).toBe('success');
     await started();
     expect(mockWarn).toHaveBeenCalled();
-    expect(JSON.stringify(mockWarn.mock.calls)).not.toMatch(
+    expect(JSON.stringify(readLogCalls(mockWarn.mock.calls))).not.toMatch(
       /fixture-security-token|\/private\/source/,
     );
   },
@@ -541,7 +542,7 @@ test('signing failure is sanitized, releases unread source and never starts SDK'
   );
   expect(fetch).not.toHaveBeenCalled();
   expect(release).toHaveBeenCalledTimes(1);
-  expect(mockWarn).toHaveBeenCalledWith(
+  expect(readLogCalls(mockWarn.mock.calls)).toContainEqual([
     'oss.upload.failed',
     expect.objectContaining({
       context: expect.objectContaining({ operationId: expect.any(String) }),
@@ -551,7 +552,7 @@ test('signing failure is sanitized, releases unread source and never starts SDK'
         errorType: 'Error',
       }),
     }),
-  );
+  ]);
 });
 
 test('native preparation logs its safe cause without starting transfer', async () => {
@@ -566,7 +567,7 @@ test('native preparation logs its safe cause without starting transfer', async (
     error: { reason: 'unsupported' },
   });
   expect(fetch).not.toHaveBeenCalled();
-  expect(mockWarn).toHaveBeenCalledWith(
+  expect(readLogCalls(mockWarn.mock.calls)).toContainEqual([
     'oss.upload.failed',
     expect.objectContaining({
       phase: 'native_prepare',
@@ -575,8 +576,8 @@ test('native preparation logs its safe cause without starting transfer', async (
         sourceCode: 'ETIMEDOUT',
       }),
     }),
-  );
-  expect(JSON.stringify(mockWarn.mock.calls)).not.toMatch(
+  ]);
+  expect(JSON.stringify(readLogCalls(mockWarn.mock.calls))).not.toMatch(
     /private-token|\/private\/source/,
   );
 });
@@ -592,7 +593,7 @@ test('transfer failure preserves the cause and HTTP rejection preserves only val
     status: 'failed',
     error: { reason: 'unconfirmed' },
   });
-  expect(mockWarn).toHaveBeenCalledWith(
+  expect(readLogCalls(mockWarn.mock.calls)).toContainEqual([
     'oss.upload.failed',
     expect.objectContaining({
       phase: 'transfer',
@@ -601,7 +602,7 @@ test('transfer failure preserves the cause and HTTP rejection preserves only val
         sourceCode: 'ECONNRESET',
       }),
     }),
-  );
+  ]);
   const rejected = task();
   const failure = oss.uploadOssFile(input, { authorization: provided() });
   await started();
@@ -610,15 +611,15 @@ test('transfer failure preserves the cause and HTTP rejection preserves only val
     status: 'failed',
     error: { reason: 'rejected', httpStatus: 403 },
   });
-  expect(mockWarn).toHaveBeenLastCalledWith(
+  expect(readLogCalls(mockWarn.mock.calls).at(-1)).toEqual([
     'oss.upload.failed',
     expect.objectContaining({
       phase: 'response',
       httpStatus: 403,
       fields: { operation: 'upload', reason: 'rejected' },
     }),
-  );
-  expect(JSON.stringify(mockWarn.mock.calls)).not.toContain(
+  ]);
+  expect(JSON.stringify(readLogCalls(mockWarn.mock.calls))).not.toContain(
     'fixture-security-token',
   );
 });
@@ -638,7 +639,7 @@ test('managed authorization exceptions log once and cancellation remains quiet',
     error: { reason: 'credential' },
   });
   expect(mockWarn).toHaveBeenCalledTimes(1);
-  expect(mockWarn).toHaveBeenCalledWith(
+  expect(readLogCalls(mockWarn.mock.calls)).toContainEqual([
     'oss.upload.authorization_failed',
     expect.objectContaining({
       phase: 'credential',
@@ -647,7 +648,7 @@ test('managed authorization exceptions log once and cancellation remains quiet',
         sourceCode: 'ETIMEDOUT',
       }),
     }),
-  );
+  ]);
   mockWarn.mockClear();
   const native = task();
   const result = oss.uploadOssFile(input, {
@@ -681,7 +682,7 @@ test('observer and source release exceptions have separate diagnostics without c
   expect((await result).status).toBe('success');
   await started();
   expect(mockWarn).toHaveBeenCalledTimes(2);
-  expect(mockWarn).toHaveBeenCalledWith(
+  expect(readLogCalls(mockWarn.mock.calls)).toContainEqual([
     'oss.upload.observer_failed',
     expect.objectContaining({
       phase: 'callback',
@@ -690,8 +691,8 @@ test('observer and source release exceptions have separate diagnostics without c
         errorType: 'TypeError',
       }),
     }),
-  );
-  expect(mockWarn).toHaveBeenCalledWith(
+  ]);
+  expect(readLogCalls(mockWarn.mock.calls)).toContainEqual([
     'oss.upload.source_release_failed',
     expect.objectContaining({
       context: expect.objectContaining({ operationId: expect.any(String) }),
@@ -701,8 +702,8 @@ test('observer and source release exceptions have separate diagnostics without c
         sourceCode: 'EIO',
       }),
     }),
-  );
-  expect(JSON.stringify(mockWarn.mock.calls)).not.toMatch(
+  ]);
+  expect(JSON.stringify(readLogCalls(mockWarn.mock.calls))).not.toMatch(
     /private-progress|private-release/,
   );
 });
@@ -723,7 +724,7 @@ test('native cancellation exception is diagnosed while settlement still belongs 
   controller.abort();
   expect(native.request.cancel).toHaveBeenCalledTimes(1);
   expect(release).not.toHaveBeenCalled();
-  expect(mockWarn).toHaveBeenCalledWith(
+  expect(readLogCalls(mockWarn.mock.calls)).toContainEqual([
     'oss.upload.cancel_failed',
     expect.objectContaining({
       phase: 'cleanup',
@@ -732,12 +733,14 @@ test('native cancellation exception is diagnosed while settlement still belongs 
         errorType: 'Error',
       }),
     }),
-  );
+  ]);
   native.respond(200);
   expect((await result).status).toBe('success');
   native.complete();
   expect(release).toHaveBeenCalledTimes(1);
-  expect(JSON.stringify(mockWarn.mock.calls)).not.toContain('private-cancel');
+  expect(JSON.stringify(readLogCalls(mockWarn.mock.calls))).not.toContain(
+    'private-cancel',
+  );
 });
 
 test('authorization rejection after cancellation releases the unread source without warning', async () => {

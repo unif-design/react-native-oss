@@ -12,13 +12,13 @@ export function createSourceRelease(
   let released = false;
   const log = createLogger('oss.upload');
   function failed(error: unknown) {
-    log.warn('oss.upload.source_release_failed', {
+    log.warn('oss.upload.source_release_failed', () => ({
       context,
       phase: 'cleanup',
       outcome: 'failed',
       code: 'oss.source_release_failed',
       fields: { operation: 'release', ...getFailureDiagnostics(error) },
-    });
+    }));
   }
   return () => {
     if (released) return;

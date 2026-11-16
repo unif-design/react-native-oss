@@ -74,8 +74,8 @@
     "@types/jest": "30.0.0",
     "@types/node": "^22.0.0",
     "@types/react": "~19.3.0",
-    "@unif/react-native-files": "0.2.1",
-    "@unif/react-native-logger": "0.2.2",
+    "@unif/react-native-files": "0.2.2",
+    "@unif/react-native-logger": "^0.3.0",
     "commitlint": "21.2.1",
     "del-cli": "^8.0.1",
     "eslint": "^9.39.5",
@@ -99,7 +99,7 @@
   },
   "peerDependencies": {
     "@unif/react-native-files": "^0.2.1",
-    "@unif/react-native-logger": "^0.2.2",
+    "@unif/react-native-logger": "^0.3.0",
     "react": "^19.3.0",
     "react-native": ">=0.88.0",
     "react-native-blob-util": "1.1.1"
