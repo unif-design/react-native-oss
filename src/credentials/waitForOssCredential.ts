@@ -1,4 +1,4 @@
-import type { OssCredentialResult } from './types';
+import type { OssCredentialResult } from '../types';
 
 /** 结束本地等待并通知上游取消；不表示上游操作或资源使用已经结束。 */
 export function waitForOssCredential(

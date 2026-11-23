@@ -1,5 +1,5 @@
-import { OSS_CREDENTIAL_MESSAGES } from './constants';
-import type { OssCredentialErrorReason, OssCredentialFailed } from './types';
+import { OSS_CREDENTIAL_MESSAGES } from '../constants';
+import type { OssCredentialErrorReason, OssCredentialFailed } from '../types';
 
 export function credentialFailure(
   reason: OssCredentialErrorReason,

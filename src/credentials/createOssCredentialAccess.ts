@@ -4,7 +4,7 @@ import {
   getFailureDiagnostics,
 } from '@unif/react-native-logger';
 import { waitForOssCredential } from './waitForOssCredential';
-import { OSS_CREDENTIAL_MARGIN_MS } from './constants';
+import { OSS_CREDENTIAL_MARGIN_MS } from '../constants';
 import { credentialFailure } from './credentialFailure';
 import { readOssCredential } from './readOssCredential';
 import { readOssExpiration } from './readOssExpiration';
@@ -13,7 +13,7 @@ import type {
   OssCredentialAccess,
   OssCredentialRequest,
   OssKey,
-} from './types';
+} from '../types';
 
 export function createOssCredentialAccess(
   requestCredential: OssCredentialRequest,

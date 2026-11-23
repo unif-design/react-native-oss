@@ -1,5 +1,5 @@
-export { credentialFailure as createOssCredentialFailure } from './credentialFailure';
-export { createOssCredentialAccess } from './createOssCredentialAccess';
+export { credentialFailure as createOssCredentialFailure } from './credentials/credentialFailure';
+export { createOssCredentialAccess } from './credentials/createOssCredentialAccess';
 export type {
   OssKey,
   OssCredential,
@@ -49,4 +49,4 @@ export type {
   OssBatchOptions,
   OssBatchResult,
 } from './transfers';
-export { readOssCredential } from './readOssCredential';
+export { readOssCredential } from './credentials/readOssCredential';

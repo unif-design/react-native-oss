@@ -1,4 +1,4 @@
-import { OSS_EXPIRATION_PATTERN } from './constants';
+import { OSS_EXPIRATION_PATTERN } from '../constants';
 
 export function readOssExpiration(value: string): number | null {
   const match = OSS_EXPIRATION_PATTERN.exec(value);
