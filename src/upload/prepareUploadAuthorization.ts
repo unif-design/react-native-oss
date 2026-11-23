@@ -3,7 +3,7 @@ import {
   createOperationContext,
   getFailureDiagnostics,
 } from '@unif/react-native-logger';
-import { readOssCredential } from '../readOssCredential';
+import { readOssCredential } from '../credentials/readOssCredential';
 import { uploadFailure } from './uploadFailure';
 import type { OssCredentialResult } from '../types';
 import type { OssAuthorization, OssUploadFailed } from './types';

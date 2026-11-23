@@ -6,9 +6,9 @@ import {
   OSS_DELETE_CHARACTER,
   OSS_HTTP_SCHEME,
   OSS_ORIGIN_PATTERN,
-} from './constants';
+} from '../constants';
 import { readOssExpiration } from './readOssExpiration';
-import type { OssCredential } from './types';
+import type { OssCredential } from '../types';
 
 function text(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;
